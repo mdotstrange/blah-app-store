@@ -2,6 +2,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
@@ -23,6 +24,8 @@ const pollers = new Map(); // window id -> {name, seen}
 const sendTimes = new Map(); // name -> recent send timestamps
 
 const indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'));
+// Lets the browser revalidate instead of reusing a stale page after an update
+const indexEtag = `"${crypto.createHash('sha1').update(indexHtml).digest('hex').slice(0, 16)}"`;
 
 // Used for the favicon and the notification popup icon. Optional: if the file
 // isn't bundled the chat still runs, the icon just comes up blank.
@@ -276,7 +279,16 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    if (req.headers['if-none-match'] === indexEtag) {
+      res.writeHead(304, { 'Cache-Control': 'no-cache', ETag: indexEtag });
+      res.end();
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-cache',
+      ETag: indexEtag,
+    });
     res.end(indexHtml);
     return;
   }
