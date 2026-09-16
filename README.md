@@ -10,6 +10,8 @@ open sees the same room.
 - Username = whatever you type in once (a device name like `MacBook-Pro`
   works great); it's remembered by that browser
 - Shows how many chat windows are online
+- Desktop notifications: a popup with the sender and message when the chat is
+  in a background tab (click it to jump back to the tab and reply)
 - History (last 200 messages) is stored on your Umbrel and survives
   restarts; anyone in the room can wipe it with the clear button or by
   sending `/clear`
@@ -57,26 +59,54 @@ Open BLAH from the dashboard, or skip the dashboard entirely and go to
 your roommate's PC, phones, whatever. Each person types a name once and
 it's remembered by that browser.
 
+For notifications, open it at **https://umbrel.local:3747** instead: browsers
+only allow notifications on secure addresses. umbrelOS serves every app port
+over HTTPS as well as HTTP using its own local certificate authority, so you
+either accept the certificate warning the first time or install Umbrel's CA
+certificate from the dashboard. Plain http still works fine, it just can't
+pop up notifications.
+
+## Notifications
+
+Click **notify** in the header and allow the browser's permission request.
+From then on, whenever a message arrives while the BLAH window is in the
+background (another tab, another app, screen off), you get an OS notification
+with the sender and the message. Clicking it brings the tab back to the front
+with the cursor in the input box, ready to reply.
+
+- It stays quiet while you're actually looking at the room, so you don't get
+  popups for messages you're already reading. Tabs that are open but not
+  focused (the "Chrome in the background" case) do notify.
+- The toggle is remembered per browser, and the button shows the current
+  state: `notify off`, `notify on`, `notify blocked` (permission denied in the
+  browser's site settings) or `notify n/a` (opened over plain http, so the
+  browser has no notification support).
+- The tab title shows an unread count, like `(3) BLAH`, and clears when you
+  come back to the tab. That works even without notifications.
+- `requiresHttps: true` in `blah/umbrel-app.yml` is what makes the dashboard
+  open BLAH over HTTPS. If you'd rather stick to plain http, delete that line
+  and reinstall — everything except notifications still works.
+- On iPhone and iPad, Safari only shows notifications for web apps added to
+  the home screen, not for a normal tab.
+
 ## Notes
 
 - **No login, by design.** `PROXY_AUTH_ADD: "false"` in
   `blah/docker-compose.yml` turns off Umbrel's login wall so anyone on your
   LAN can open the chat. If you'd rather have Umbrel's login protection,
   delete that line and reinstall.
-- "online" counts open chat windows, not people.
+- "online" counts open chat windows, not people: each tab, phone, or laptop
+  with the chat open counts once, even when two of them pick the same name.
+- Flood control is deliberately gentle: a name can send 15 messages per 10
+  seconds and `/clear` has a 3 second cooldown, so one window can't blank the
+  room or flood it on a loop. Renaming resets the message budget, so treat it
+  as a speed bump rather than a ban.
 - To update after changing the code: push to GitHub, bump `version` in
   `blah/umbrel-app.yml`, and the dashboard will offer an Update button
   (umbrelOS re-checks app stores every few minutes).
-- The dashboard icon works once you add this line to `blah/umbrel-app.yml`
-  (with your real GitHub username/repo) and push:
-
-  ```yaml
-  icon: https://raw.githubusercontent.com/<your-username>/blah-app-store/master/blah/icon.svg
-  ```
-
-  The app works fine without it; the tile just shows a placeholder.
-- Also update the `website`/`repo`/`support` URLs in `blah/umbrel-app.yml`
-  to your real repo URL when you get a chance (cosmetic only).
+- The dashboard icon comes from `blah/icon.svg` over its raw GitHub URL, so it
+  only appears once the repo is public. Until then the tile shows a
+  placeholder and the app still works.
 
 ## Fallback: run it without the app store
 

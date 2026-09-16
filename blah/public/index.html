@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>BLAH</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {
     --green: #33ff33;
@@ -147,7 +148,7 @@
     <h1>BLAH</h1>
     <span id="status">connecting…</span>
     <span id="online"></span>
-    <span id="me">&lt;<span id="myname"></span>&gt; <button id="rename" type="button">rename</button> <button id="clear" type="button" title="wipe the history for everyone">clear</button></span>
+    <span id="me">&lt;<span id="myname"></span>&gt; <button id="notify" type="button">notify off</button> <button id="rename" type="button">rename</button> <button id="clear" type="button" title="wipe the history for everyone">clear</button></span>
   </header>
 
   <div id="log"></div>
@@ -177,8 +178,12 @@
   var overlay = document.getElementById('overlay');
   var nameInput = document.getElementById('nameInput');
   var mynameEl = document.getElementById('myname');
+  var notifyBtn = document.getElementById('notify');
 
   var name = localStorage.getItem('blah-name') || '';
+  // Random per-window id so two windows using the same name still count as
+  // two "online" (and one person's tab can't be mistaken for another's)
+  var windowId = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var lastId = 0;
   var nearBottom = true;
 
@@ -221,6 +226,9 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name })
+    }).then(function (r) {
+      if (r.status === 429) addSys('history was cleared a moment ago, try again');
+      else if (!r.ok) addSys('failed to clear history');
     }).catch(function () {
       addSys('failed to clear history');
     });
@@ -241,7 +249,7 @@
     return pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
-  function addMsg(m) {
+  function addMsg(m, notify) {
     if (m.id <= lastId) return;
     lastId = m.id;
     var div = document.createElement('div');
@@ -265,6 +273,7 @@
 
     while (log.children.length > 250) log.removeChild(log.firstChild);
     if (nearBottom) log.scrollTop = log.scrollHeight;
+    if (notify !== false) announce(m);
   }
 
   function addSys(text) {
@@ -274,6 +283,127 @@
     log.appendChild(div);
   }
 
+  // ---- notifications and unread counter ---------------------------------
+  // Browsers only expose the Notification API on secure origins, so this
+  // switches itself off (politely) when BLAH is opened over plain http.
+  var notifyWanted = localStorage.getItem('blah-notify') === 'on';
+  var openNotifications = [];
+  var unread = 0;
+
+  function notificationsSupported() {
+    return window.isSecureContext !== false && typeof window.Notification !== 'undefined';
+  }
+
+  function notificationsOn() {
+    return notifyWanted && notificationsSupported() && Notification.permission === 'granted';
+  }
+
+  function httpsHint() {
+    return 'https://' + (location.hostname || 'umbrel.local') + (location.port ? ':' + location.port : '');
+  }
+
+  function renderNotifyButton() {
+    if (!notificationsSupported()) {
+      notifyBtn.textContent = 'notify n/a';
+      notifyBtn.title = 'this browser needs https (or localhost) before it can show notifications';
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      notifyBtn.textContent = 'notify blocked';
+      notifyBtn.title = 'notifications are blocked for this site - allow them in your browser settings';
+      return;
+    }
+    notifyBtn.textContent = notificationsOn() ? 'notify on' : 'notify off';
+    notifyBtn.title = notificationsOn()
+      ? 'notifications on - click to turn them off'
+      : 'get an OS notification for new messages while this window is in the background';
+  }
+
+  function closeNotifications() {
+    while (openNotifications.length) {
+      var n = openNotifications.pop();
+      try { n.close(); } catch (err) {}
+    }
+  }
+
+  function clearUnread() {
+    if (!unread) return;
+    unread = 0;
+    document.title = 'BLAH';
+  }
+
+  function showNotification(m) {
+    var n;
+    try {
+      // One notification per message (unique tag), so nothing gets coalesced away
+      n = new Notification('<' + m.name + '>', {
+        body: m.text,
+        icon: '/icon.svg',
+        tag: 'blah-' + m.id
+      });
+    } catch (err) {
+      return; // the browser refused it; the unread counter still updates
+    }
+    // Clicking the popup jumps back to this tab with the cursor in the input
+    n.onclick = function () {
+      window.focus();
+      closeNotifications();
+      clearUnread();
+      input.focus();
+      log.scrollTop = log.scrollHeight;
+    };
+    openNotifications.push(n);
+    if (openNotifications.length > 10) openNotifications.shift();
+  }
+
+  // Only for messages that are genuinely new - history replays pass notify=false
+  function announce(m) {
+    if (m.name === name) return; // our own message echoing back
+    if (!document.hidden && document.hasFocus()) return; // they're reading the room
+    unread++;
+    document.title = '(' + unread + ') BLAH';
+    if (notificationsOn()) showNotification(m);
+  }
+
+  window.addEventListener('focus', function () {
+    closeNotifications();
+    clearUnread();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) {
+      closeNotifications();
+      clearUnread();
+    }
+  });
+
+  notifyBtn.addEventListener('click', function () {
+    if (!notificationsSupported()) {
+      addSys('this browser only shows notifications on a secure address - try ' + httpsHint());
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      addSys('notifications are blocked for this site - allow them in your browser settings, then reload');
+      return;
+    }
+    if (Notification.permission !== 'granted') {
+      Notification.requestPermission().then(function (permission) {
+        notifyWanted = permission === 'granted';
+        localStorage.setItem('blah-notify', notifyWanted ? 'on' : 'off');
+        renderNotifyButton();
+        addSys(notifyWanted
+          ? 'notifications on - you will get a popup when a message arrives while this window is in the background'
+          : 'notifications were not allowed');
+      });
+      return;
+    }
+    notifyWanted = !notifyWanted;
+    localStorage.setItem('blah-notify', notifyWanted ? 'on' : 'off');
+    renderNotifyButton();
+    addSys(notifyWanted ? 'notifications on' : 'notifications off');
+  });
+
+  renderNotifyButton();
+
   function setOnline(count) {
     onlineEl.textContent = count + ' online';
   }
@@ -281,8 +411,9 @@
   function startPolling() {
     setStatus('online', true);
     addSys('live updates limited, refreshing every 2s');
+    var resyncing = true; // the first fetch loads the whole room, so nothing is new
     setInterval(function () {
-      fetch('/messages?since=' + lastId + '&u=' + encodeURIComponent(name))
+      fetch('/messages?since=' + (resyncing ? 0 : lastId) + '&u=' + encodeURIComponent(name) + '&w=' + windowId)
         .then(function (r) { return r.json(); })
         .then(function (data) {
           if (generation === null) {
@@ -292,8 +423,14 @@
             log.innerHTML = '';
             lastId = 0;
             addSys('chat history was cleared');
+            // Message ids restart after a clear, so drop this stale batch and
+            // reload the whole room on the next tick instead of crying wolf
+            resyncing = true;
+            return;
           }
-          data.messages.forEach(addMsg);
+          var replay = resyncing;
+          resyncing = false;
+          data.messages.forEach(function (m) { addMsg(m, !replay); });
           if (nearBottom) log.scrollTop = log.scrollHeight;
           setOnline(data.online);
           setStatus('online', true);
@@ -315,13 +452,22 @@
   es.onmessage = function (e) {
     var data = JSON.parse(e.data);
     if (data.type === 'history') {
-      // Fresh stream: rebuild from scratch so reconnects self-heal
+      // Fresh stream: rebuild from scratch so reconnects self-heal. Messages
+      // that showed up while we were disconnected count as new, but only if
+      // this page already had a history loaded (so opening BLAH in a
+      // background tab doesn't fire a popup for every old message) and only
+      // if they are recent (so a long-dead tab doesn't wake up with a burst).
+      var previousId = lastId;
+      var missed = previousId > 0;
+      var cutoff = Date.now() - 120000;
       log.innerHTML = '';
       lastId = 0;
-      data.messages.forEach(addMsg);
+      data.messages.forEach(function (m) {
+        addMsg(m, missed && m.id > previousId && m.time > cutoff);
+      });
       log.scrollTop = log.scrollHeight;
     } else if (data.type === 'message') {
-      addMsg(data.message);
+      addMsg(data.message, true);
     } else if (data.type === 'cleared') {
       log.innerHTML = '';
       lastId = 0;
@@ -350,6 +496,9 @@
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: name, text: text })
+    }).then(function (r) {
+      if (r.status === 429) addSys('slow down, message not sent');
+      else if (!r.ok) addSys('message failed to send');
     }).catch(function () {
       addSys('message failed to send');
     });

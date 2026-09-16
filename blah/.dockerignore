@@ -1,0 +1,13 @@
+# The build context is APP_DATA_DIR, so umbreld copies this whole folder there.
+# Only server.js and public/ end up in the image; the rest is just noise, and
+# the chat history must never make it into a layer.
+data
+node_modules
+.git
+.gitignore
+.gitattributes
+*.md
+docker-compose*.yml
+umbrel-app.yml
+settings.yml
+app-gateway.json

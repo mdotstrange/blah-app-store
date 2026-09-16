@@ -2,8 +2,9 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.1.0"
+version: "1.3.0"
 tagline: A dead-simple local chat room
+icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
   BLAH is a tiny early-internet-style chat room for your local network.
 
@@ -17,14 +18,20 @@ description: >-
   restarts. Anyone in the room can wipe the history for everyone with
   the clear button.
 releaseNotes: >-
-  Chat history now persists on your Umbrel (survives app restarts), and a
-  new clear button (or sending /clear) wipes it for everyone.
+  Desktop notifications: click "notify" in the header and Chrome (or any
+  browser) will pop up an OS notification with the sender and message whenever
+  a message arrives while the BLAH window is in the background. Clicking the
+  popup jumps back to the tab with the cursor in the input. Notifications need
+  a secure address, so the app is opened over HTTPS (accept the Umbrel
+  certificate or install Umbrel's local CA), and the tab title now shows an
+  unread count as a fallback. Also serves the BLAH icon as the favicon.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []
 repo: https://github.com/MdotStrange/blah-app-store
 support: https://github.com/MdotStrange/blah-app-store/issues
 port: 3747
+requiresHttps: true
 gallery: []
 path: ""
 submitter: MdotStrange
