@@ -1,0 +1,19 @@
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      # The format here is: <app-id>_<docker-service-name>_1
+      APP_HOST: blah_server_1
+      APP_PORT: 3000
+      # No Umbrel login wall: anyone on the local network can open the chat
+      PROXY_AUTH_ADD: "false"
+
+  server:
+    # Built on the Umbrel itself at install time (no registry needed).
+    # Intentionally no `image:` key - umbreld tries to pull every image it
+    # finds and the install would fail for a local-only image.
+    build: .
+    user: "1000:1000"
+    init: true
+    restart: on-failure

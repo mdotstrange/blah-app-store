@@ -1,0 +1,29 @@
+manifestVersion: 1
+id: blah
+category: social
+name: BLAH
+version: "1.0.0"
+tagline: A dead-simple local chat room
+description: >-
+  BLAH is a tiny early-internet-style chat room for your local network.
+
+
+  No accounts, no passwords, no setup. Open it from any device that can
+  reach your Umbrel, pick a name, and start typing. Anyone on your network
+  with the app open sees the same room.
+
+
+  Chat history lives only in memory (last 200 messages) and disappears
+  whenever the app restarts.
+releaseNotes: >-
+  First release.
+developer: MdotStrange
+website: https://github.com/MdotStrange/blah-app-store
+dependencies: []
+repo: https://github.com/MdotStrange/blah-app-store
+support: https://github.com/MdotStrange/blah-app-store/issues
+port: 3747
+gallery: []
+path: ""
+submitter: MdotStrange
+submission: https://github.com/MdotStrange/blah-app-store
