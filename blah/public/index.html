@@ -7,164 +7,414 @@
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
   :root {
-    --green: #33ff33;
-    --dim: #1a8f1a;
-    --bg: #050805;
+    --face: #c0c0c0;
+    --hilite: #ffffff;
+    --light: #dfdfdf;
+    --shadow: #808080;
+    --dark: #404040;
+    --desktop: #007b7b;
+    --title-a: #000080;
+    --title-b: #1084d0;
+    --buddy-bg: #ededed;
+    --msg-size: 18px;
+    --msg-font: Georgia, "Times New Roman", serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; }
   body {
-    background: var(--bg);
-    color: var(--green);
-    font-family: "Courier New", ui-monospace, monospace;
-    font-size: 15px;
+    background: var(--desktop);
+    color: #000;
+    font-family: Tahoma, "MS Sans Serif", Verdana, sans-serif;
+    font-size: 13px;
     display: flex;
     flex-direction: column;
     height: 100dvh;
-    text-shadow: 0 0 4px rgba(51, 255, 51, 0.5);
+    overflow: hidden;
   }
-  /* subtle scanlines */
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(
-      to bottom,
-      transparent 0 2px,
-      rgba(0, 0, 0, 0.25) 2px 4px
-    );
-    z-index: 10;
-  }
-  header {
-    display: flex;
-    align-items: center;
-    gap: 1em;
-    padding: 0.5em 1em;
-    border-bottom: 1px solid var(--dim);
-    flex: none;
-    flex-wrap: wrap;
-  }
-  header h1 {
-    font-size: 1.2em;
-    letter-spacing: 0.4em;
-    font-weight: bold;
-  }
-  header h1::after {
-    content: "▊";
-    animation: blink 1s steps(1) infinite;
-    letter-spacing: 0;
-  }
-  @keyframes blink { 50% { opacity: 0; } }
-  #status { color: var(--dim); font-size: 0.85em; }
-  #status.ok { color: var(--green); }
-  #me { margin-left: auto; font-size: 0.9em; }
-  #me button {
-    background: none;
-    border: 1px solid var(--dim);
-    color: var(--dim);
-    font: inherit;
-    font-size: 0.85em;
-    padding: 0 0.5em;
-    cursor: pointer;
-  }
-  #me button:hover { color: var(--green); border-color: var(--green); }
-  #log {
+
+  /* ---------- window frame ---------- */
+  #desktop {
     flex: 1;
-    overflow-y: auto;
-    padding: 1em;
-    line-height: 1.5;
-    word-break: break-word;
-  }
-  #log::-webkit-scrollbar { width: 8px; }
-  #log::-webkit-scrollbar-thumb { background: var(--dim); }
-  .msg .time { color: var(--dim); }
-  .msg .name { font-weight: bold; }
-  .msg.mine .name { color: #aaffaa; }
-  .sys { color: var(--dim); font-style: italic; }
-  form {
-    flex: none;
-    display: flex;
-    gap: 0.5em;
-    padding: 0.6em 1em;
-    border-top: 1px solid var(--dim);
-  }
-  form .prompt { flex: none; }
-  #input {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    color: var(--green);
-    font: inherit;
-    text-shadow: inherit;
-    caret-color: var(--green);
-  }
-  /* name overlay */
-  #overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(5, 8, 5, 0.95);
+    min-height: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20;
+    padding: 16px;
   }
-  #overlay.hidden { display: none; }
-  #overlay .box {
-    border: 1px solid var(--green);
-    padding: 2em;
-    text-align: center;
-    max-width: 90vw;
+  .window {
+    display: flex;
+    flex-direction: column;
+    width: min(980px, 100%);
+    height: min(640px, 100%);
+    min-height: 300px;
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
   }
-  #overlay h2 { letter-spacing: 0.5em; margin-bottom: 1em; }
-  #overlay p { color: var(--dim); margin-bottom: 1em; font-size: 0.9em; }
-  #nameInput {
+  .titlebar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 24px;
+    padding: 0 3px;
+    background: linear-gradient(90deg, var(--title-a), var(--title-b));
+    color: #fff;
+    font-weight: bold;
+    font-size: 12px;
+  }
+  .titlebar .logo {
+    flex: none;
+    width: 16px;
+    height: 14px;
+    background: #ffffff;
+    border: 1px solid var(--dark);
+    position: relative;
+  }
+  .titlebar .logo::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 2px;
+    width: 8px;
+    height: 9px;
+    background: #f5c400;
+    border-radius: 4px 4px 2px 2px;
+  }
+  .titlebar .title {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .tb-buttons { flex: none; display: flex; gap: 2px; }
+  .tb-btn {
+    width: 18px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1866c8;
+    border: 1px solid;
+    border-color: #7fb0ff #001d5e #001d5e #7fb0ff;
+    color: #fff;
+    font: bold 10px/1 Tahoma, sans-serif;
+    cursor: default;
+    user-select: none;
+  }
+  .tb-btn.close { background: #d24d2a; border-color: #ffb9a3 #7a2208 #7a2208 #ffb9a3; }
+
+  /* ---------- menu bar ---------- */
+  .menubar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 1px;
+    padding: 1px 3px;
+    font-size: 12px;
+  }
+  .menu { position: relative; }
+  .menu > button {
     background: none;
     border: none;
-    border-bottom: 1px solid var(--dim);
-    outline: none;
-    color: var(--green);
     font: inherit;
-    text-align: center;
-    width: 16em;
-    max-width: 70vw;
-    margin-bottom: 1.2em;
-  }
-  #overlay button {
-    background: var(--green);
-    color: var(--bg);
-    border: none;
-    font: inherit;
-    font-weight: bold;
-    padding: 0.4em 1.5em;
+    color: #000;
+    padding: 2px 7px;
     cursor: pointer;
-    letter-spacing: 0.2em;
+  }
+  .menu.open > button, .menu > button:hover { background: var(--title-a); color: #fff; }
+  .menu-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 190px;
+    padding: 2px;
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.3);
+    z-index: 40;
+  }
+  .menu-panel.open { display: block; }
+  .menu-item { padding: 3px 8px; white-space: nowrap; cursor: pointer; }
+  .menu-item:hover { background: var(--title-a); color: #fff; }
+  .status-area { margin-left: auto; padding: 0 6px; font-size: 11px; color: var(--dark); }
+  #status.ok { color: #006400; font-weight: bold; }
+
+  /* ---------- message pane + buddy list ---------- */
+  .client { flex: 1; min-height: 0; display: flex; gap: 4px; padding: 4px; }
+  .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+  #log {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 6px 8px;
+    background: #fff;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+    font-family: var(--msg-font);
+    font-size: var(--msg-size);
+    line-height: 1.35;
+    color: #000082;
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+  .msg .time { color: var(--shadow); font-family: Tahoma, sans-serif; font-size: 0.62em; margin-right: 5px; }
+  .msg .name { font-weight: bold; }
+  .msg.mine { background: #f2f5ff; }
+  .sys { color: #6b6b6b; font-style: italic; }
+
+  /* ---------- formatting toolbar ---------- */
+  .toolbar { flex: none; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+  .deco { cursor: default; }
+  .swatch {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    background: #8000a0;
+    border: 2px solid;
+    border-color: var(--dark) var(--hilite) var(--hilite) var(--dark);
+  }
+  #sizeLabel { font-size: 11px; color: var(--dark); padding: 0 2px; min-width: 34px; }
+
+  /* ---------- win98 buttons ---------- */
+  .btn {
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    box-shadow: inset 1px 1px 0 var(--light), inset -1px -1px 0 var(--shadow);
+    color: #000;
+    font: inherit;
+    font-size: 12px;
+    padding: 2px 8px;
+    cursor: pointer;
+  }
+  .btn:hover { background: #cecece; }
+  .btn:active {
+    border-color: var(--dark) var(--hilite) var(--hilite) var(--dark);
+    box-shadow: inset 1px 1px 0 var(--shadow), inset -1px -1px 0 var(--light);
+    transform: translate(1px, 1px);
+  }
+  select.btn { padding: 1px 2px; }
+
+  /* ---------- compose ---------- */
+  .compose { flex: none; display: flex; gap: 4px; align-items: stretch; }
+  #input {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 6px;
+    background: #fff;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+    font-family: var(--msg-font);
+    font-size: var(--msg-size);
+    color: #000082;
+    outline: none;
+  }
+  #send { width: 76px; font-size: 12px; }
+
+  .sidebar { flex: none; width: 200px; display: flex; flex-direction: column; gap: 2px; }
+  .sidebar-header {
+    flex: none;
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 2px 5px;
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    font-weight: bold;
+    font-size: 12px;
+  }
+  #online { font-weight: normal; color: var(--dark); }
+  .buddy-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    background: var(--buddy-bg);
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+  }
+  .buddy { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font-size: 14px; }
+  .buddy .dot { flex: none; width: 10px; height: 10px; border: 1px solid rgba(0, 0, 0, 0.35); }
+  .buddy.dim { color: var(--shadow); font-size: 12px; padding: 6px; }
+
+  /* ---------- taskbar ---------- */
+  .taskbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px;
+    background: var(--face);
+    border-top: 2px solid var(--hilite);
+  }
+  #task { font-weight: bold; max-width: 65%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #clock {
+    margin-left: auto;
+    padding: 1px 7px;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+    font-size: 12px;
+  }
+
+  /* ---------- sign-on dialog ---------- */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+    padding: 16px;
+  }
+  #overlay.hidden { display: none; }
+  .dialog {
+    width: min(380px, 100%);
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.35);
+  }
+  .dialog-title {
+    display: flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 5px;
+    background: linear-gradient(90deg, var(--title-a), var(--title-b));
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+  }
+  .dialog-body { padding: 14px; }
+  .dialog-body p { margin-bottom: 10px; }
+  #nameInput {
+    width: 100%;
+    padding: 4px 6px;
+    background: #fff;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+    font: inherit;
+    font-size: 15px;
+    outline: none;
+  }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 14px; }
+
+  @media (max-width: 720px) {
+    #desktop { padding: 0; }
+    .window { width: 100%; height: 100%; border: none; box-shadow: none; }
+    .sidebar { display: none; }
+    .menubar { flex-wrap: wrap; }
   }
 </style>
 </head>
 <body>
-  <header>
-    <h1>BLAH</h1>
-    <span id="status">connecting…</span>
-    <span id="online"></span>
-    <span id="me">&lt;<span id="myname"></span>&gt; <button id="notify" type="button">notify off</button> <button id="rename" type="button">rename</button> <button id="clear" type="button" title="wipe the history for everyone">clear</button></span>
-  </header>
+  <div id="desktop">
+    <div class="window">
+      <div class="titlebar">
+        <span class="logo" aria-hidden="true"></span>
+        <span class="title">BLAH Instant Message</span>
+        <span class="tb-buttons" aria-hidden="true" title="just for show">
+          <span class="tb-btn">_</span>
+          <span class="tb-btn">&#9633;</span>
+          <span class="tb-btn close">&#10005;</span>
+        </span>
+      </div>
 
-  <div id="log"></div>
+      <div class="menubar">
+        <span class="menu" id="menu-file">
+          <button type="button" id="btn-file">File</button>
+          <div class="menu-panel" id="panel-file">
+            <div class="menu-item" id="mi-rename">Rename&#8230;</div>
+            <div class="menu-item" id="mi-clear">Clear chat history</div>
+            <div class="menu-item" id="mi-signoff">Sign off</div>
+          </div>
+        </span>
+        <span class="menu" id="menu-view">
+          <button type="button" id="btn-view">View</button>
+          <div class="menu-panel" id="panel-view">
+            <div class="menu-item" id="mi-size-down">Smaller text</div>
+            <div class="menu-item" id="mi-size-up">Bigger text</div>
+            <div class="menu-item" id="mi-size-reset">Reset text size</div>
+            <div class="menu-item" id="mi-font-reset">Reset font</div>
+            <div class="menu-item" id="mi-buddies">Show buddy list</div>
+            <div class="menu-item" id="mi-notify">Notifications</div>
+          </div>
+        </span>
+        <span class="menu" id="menu-insert">
+          <button type="button" id="btn-insert">Insert</button>
+          <div class="menu-panel" id="panel-insert">
+            <div class="menu-item" id="mi-smile">Smiley :)</div>
+            <div class="menu-item" id="mi-wink">Wink ;)</div>
+            <div class="menu-item" id="mi-grin">Grin :D</div>
+            <div class="menu-item" id="mi-sad">Sad :(</div>
+            <div class="menu-item" id="mi-heart">Heart &lt;3</div>
+            <div class="menu-item" id="mi-slash-clear">/clear command</div>
+          </div>
+        </span>
+        <span class="menu" id="menu-people">
+          <button type="button" id="btn-people">People</button>
+          <div class="menu-panel" id="panel-people">
+            <div class="menu-item" id="mi-who">Who&#8217;s here</div>
+            <div class="menu-item" id="mi-rename-2">Rename&#8230;</div>
+          </div>
+        </span>
+        <span class="status-area"><span id="status">connecting&#8230;</span></span>
+      </div>
 
-  <form id="form">
-    <span class="prompt">&gt;</span>
-    <input id="input" autocomplete="off" maxlength="500" placeholder="say something…" autofocus>
-  </form>
+      <div class="client">
+        <div class="pane">
+          <div id="log"></div>
+          <div class="toolbar">
+            <select id="fontSelect" class="btn" title="message font">
+              <option value="Georgia, 'Times New Roman', serif">Georgia</option>
+              <option value="'Times New Roman', Times, serif">Times New Roman</option>
+              <option value="Arial, Helvetica, sans-serif">Arial</option>
+              <option value="Verdana, Geneva, sans-serif">Verdana</option>
+              <option value="'Trebuchet MS', sans-serif">Trebuchet MS</option>
+              <option value="'Comic Sans MS', 'Comic Sans', cursive">Comic Sans MS</option>
+              <option value="'Courier New', Courier, monospace">Courier New</option>
+            </select>
+            <button class="btn" id="sizeDown" type="button" title="smaller message text">A-</button>
+            <button class="btn" id="sizeUp" type="button" title="bigger message text">A+</button>
+            <span id="sizeLabel"></span>
+            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><b>B</b></button>
+            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><i>I</i></button>
+            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><u>U</u></button>
+            <span class="swatch deco" title="cosmetic - names get their own colours automatically"></span>
+            <button class="btn" id="notify" type="button">notify off</button>
+          </div>
+          <form id="form" class="compose">
+            <input id="input" autocomplete="off" maxlength="500" placeholder="Type your message" autofocus>
+            <button class="btn" id="send" type="submit">Send</button>
+          </form>
+        </div>
+        <div class="sidebar" id="sidebar">
+          <div class="sidebar-header"><span>Online</span><span id="online"></span></div>
+          <div class="buddy-list" id="buddyList"></div>
+        </div>
+      </div>
+
+      <div class="taskbar">
+        <button class="btn" id="task" type="button" title="jump to the message box">BLAH &#8212; <span id="myname"></span></button>
+        <span id="clock"></span>
+      </div>
+    </div>
+  </div>
 
   <div id="overlay" class="hidden">
-    <div class="box">
-      <h2>BLAH</h2>
-      <p>pick a name (your device name works fine)</p>
-      <input id="nameInput" maxlength="24" autocomplete="off">
-      <br>
-      <button id="join" type="button">ENTER</button>
+    <div class="dialog">
+      <div class="dialog-title">BLAH</div>
+      <div class="dialog-body">
+        <p>Pick a screen name (your device name works fine):</p>
+        <input id="nameInput" maxlength="24" autocomplete="off">
+        <div class="dialog-actions">
+          <button id="join" class="btn" type="button">Sign On</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -179,19 +429,62 @@
   var nameInput = document.getElementById('nameInput');
   var mynameEl = document.getElementById('myname');
   var notifyBtn = document.getElementById('notify');
+  var buddyListEl = document.getElementById('buddyList');
+  var sidebarEl = document.getElementById('sidebar');
+  var fontSelect = document.getElementById('fontSelect');
+  var sizeLabel = document.getElementById('sizeLabel');
+  var clockEl = document.getElementById('clock');
 
   var name = localStorage.getItem('blah-name') || '';
   // Random per-window id so two windows using the same name still count as
-  // two "online" (and one person's tab can't be mistaken for another's)
+  // two windows, and so the server can tell devices apart behind the proxy
   var windowId = Math.random().toString(36).slice(2) + Date.now().toString(36);
   var lastId = 0;
   var nearBottom = true;
+  var generation = null;
+  var usingPolling = false;
+  var es = null;
+  var esOpened = false;
+  var knownNames = [];
 
-  function setStatus(text, ok) {
-    statusEl.textContent = text;
-    statusEl.className = ok ? 'ok' : '';
+  var MIN_SIZE = 13;
+  var MAX_SIZE = 40;
+  var SIZE_STEP = 2;
+  var DEFAULT_SIZE = 18;
+  var DEFAULT_FONT = "Georgia, 'Times New Roman', serif";
+
+  // ---- preferences -------------------------------------------------------
+  function prefSize() {
+    var stored = parseInt(localStorage.getItem('blah-text-size'), 10);
+    return stored >= MIN_SIZE && stored <= MAX_SIZE ? stored : DEFAULT_SIZE;
   }
 
+  function prefFont() {
+    return localStorage.getItem('blah-font') || fontSelect.value;
+  }
+
+  function prefBuddies() {
+    return localStorage.getItem('blah-buddies') !== 'off';
+  }
+
+  function applyPrefs() {
+    var size = prefSize();
+    document.documentElement.style.setProperty('--msg-size', size + 'px');
+    document.documentElement.style.setProperty('--msg-font', prefFont());
+    sizeLabel.textContent = size + 'px';
+    fontSelect.value = prefFont();
+    sidebarEl.style.display = prefBuddies() ? '' : 'none';
+    renderNotifyButton();
+    renderMenuState();
+  }
+
+  function setTextSize(size) {
+    var clamped = Math.max(MIN_SIZE, Math.min(MAX_SIZE, size));
+    localStorage.setItem('blah-text-size', String(clamped));
+    applyPrefs();
+  }
+
+  // ---- sign on dialog ----------------------------------------------------
   function showOverlay(prefill) {
     nameInput.value = prefill || '';
     overlay.classList.remove('hidden');
@@ -200,48 +493,44 @@
   }
 
   function join() {
-    var n = nameInput.value.trim().slice(0, 24);
-    if (!n) return;
-    name = n;
+    var picked = nameInput.value.trim().slice(0, 24);
+    if (!picked) return;
+    name = picked;
     localStorage.setItem('blah-name', name);
     mynameEl.textContent = name;
     overlay.classList.add('hidden');
     input.focus();
+    if (!usingPolling) connectStream(); // tell the room who we are now
+  }
+
+  function signOff() {
+    localStorage.removeItem('blah-name');
+    name = '';
+    mynameEl.textContent = '';
+    if (!usingPolling) connectStream();
+    showOverlay('');
   }
 
   document.getElementById('join').addEventListener('click', join);
   nameInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') join();
   });
-  document.getElementById('rename').addEventListener('click', function () {
-    showOverlay(name);
-  });
-
-  var generation = null;
-
-  function clearChat() {
-    if (!name) return;
-    if (!confirm('Clear the chat history for everyone?')) return;
-    fetch('/clear', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name })
-    }).then(function (r) {
-      if (r.status === 429) addSys('history was cleared a moment ago, try again');
-      else if (!r.ok) addSys('failed to clear history');
-    }).catch(function () {
-      addSys('failed to clear history');
-    });
-  }
-
-  document.getElementById('clear').addEventListener('click', clearChat);
 
   if (!name) showOverlay('user-' + Math.floor(1000 + Math.random() * 9000));
   else mynameEl.textContent = name;
 
+  // ---- message log -------------------------------------------------------
   log.addEventListener('scroll', function () {
     nearBottom = log.scrollHeight - log.scrollTop - log.clientHeight < 40;
   });
+
+  var BUDDY_COLORS = ['#cc0000', '#0000cc', '#006600', '#cc6600', '#990099', '#006666', '#a00050', '#333399'];
+
+  function buddyColor(who) {
+    var hash = 0;
+    for (var i = 0; i < who.length; i++) hash = (hash * 31 + who.charCodeAt(i)) % 9973;
+    return BUDDY_COLORS[hash % BUDDY_COLORS.length];
+  }
 
   function fmtTime(ts) {
     var d = new Date(ts);
@@ -257,11 +546,12 @@
 
     var time = document.createElement('span');
     time.className = 'time';
-    time.textContent = '[' + fmtTime(m.time) + '] ';
+    time.textContent = fmtTime(m.time);
 
     var who = document.createElement('span');
     who.className = 'name';
-    who.textContent = '<' + m.name + '>';
+    who.style.color = buddyColor(m.name);
+    who.textContent = m.name + ':';
 
     var text = document.createElement('span');
     text.textContent = ' ' + m.text;
@@ -281,6 +571,12 @@
     div.className = 'sys';
     div.textContent = '*** ' + text + ' ***';
     log.appendChild(div);
+  }
+
+  // The "you are online" line only appears right after the log is rebuilt
+  function showWelcome() {
+    if (!name || log.children.length) return;
+    addSys('Welcome, ' + name + '! You are online.');
   }
 
   // ---- notifications and unread counter ---------------------------------
@@ -344,7 +640,7 @@
     } catch (err) {
       return; // the browser refused it; the unread counter still updates
     }
-    // Clicking the popup jumps back to this tab with the cursor in the input
+    // Clicking the popup jumps back to this window with the cursor in the input
     n.onclick = function () {
       window.focus();
       closeNotifications();
@@ -376,7 +672,7 @@
     }
   });
 
-  notifyBtn.addEventListener('click', function () {
+  function toggleNotifications() {
     if (!notificationsSupported()) {
       addSys('this browser only shows notifications on a secure address - try ' + httpsHint());
       return;
@@ -390,6 +686,7 @@
         notifyWanted = permission === 'granted';
         localStorage.setItem('blah-notify', notifyWanted ? 'on' : 'off');
         renderNotifyButton();
+        renderMenuState();
         addSys(notifyWanted
           ? 'notifications on - you will get a popup when a message arrives while this window is in the background'
           : 'notifications were not allowed');
@@ -399,13 +696,179 @@
     notifyWanted = !notifyWanted;
     localStorage.setItem('blah-notify', notifyWanted ? 'on' : 'off');
     renderNotifyButton();
+    renderMenuState();
     addSys(notifyWanted ? 'notifications on' : 'notifications off');
+  }
+
+  notifyBtn.addEventListener('click', toggleNotifications);
+
+  // ---- buddy list --------------------------------------------------------
+  function renderBuddies(names, count) {
+    buddyListEl.innerHTML = '';
+    if (!names.length) {
+      var note = document.createElement('div');
+      note.className = 'buddy dim';
+      note.textContent = count ? count + ' signed on' : 'nobody else yet';
+      buddyListEl.appendChild(note);
+      return;
+    }
+    names.forEach(function (who) {
+      var row = document.createElement('div');
+      row.className = 'buddy';
+      var dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = buddyColor(who);
+      var label = document.createElement('span');
+      label.textContent = who === name ? who + ' (you)' : who;
+      row.appendChild(dot);
+      row.appendChild(label);
+      buddyListEl.appendChild(row);
+    });
+  }
+
+  function setOnline(count, names) {
+    onlineEl.textContent = '(' + count + ')';
+    knownNames = names || [];
+    renderBuddies(knownNames, count);
+  }
+
+  function whoIsHere() {
+    if (!knownNames.length) {
+      addSys('nobody has announced a name yet');
+      return;
+    }
+    addSys('signed on: ' + knownNames.join(', '));
+  }
+
+  // ---- menus -------------------------------------------------------------
+  var MENUS = ['file', 'view', 'insert', 'people'];
+
+  function closeMenus() {
+    MENUS.forEach(function (which) {
+      document.getElementById('menu-' + which).classList.remove('open');
+      document.getElementById('panel-' + which).classList.remove('open');
+    });
+  }
+
+  MENUS.forEach(function (which) {
+    document.getElementById('btn-' + which).addEventListener('click', function (e) {
+      e.stopPropagation();
+      var panel = document.getElementById('panel-' + which);
+      var wasOpen = panel.classList.contains('open');
+      closeMenus();
+      if (!wasOpen) {
+        panel.classList.add('open');
+        document.getElementById('menu-' + which).classList.add('open');
+      }
+    });
   });
 
-  renderNotifyButton();
+  function renderMenuState() {
+    document.getElementById('mi-buddies').textContent = (prefBuddies() ? '\u2713 ' : '\u00a0\u00a0\u00a0') + 'Show buddy list';
+    document.getElementById('mi-notify').textContent = (notificationsOn() ? '\u2713 ' : '\u00a0\u00a0\u00a0') + 'Notifications';
+  }
 
-  function setOnline(count) {
-    onlineEl.textContent = count + ' online';
+  function insertIntoInput(text) {
+    var at = typeof input.selectionStart === 'number' ? input.selectionStart : input.value.length;
+    input.value = input.value.slice(0, at) + text + input.value.slice(at);
+    input.focus();
+  }
+
+  var ACTIONS = {
+    'mi-rename': function () { showOverlay(name); },
+    'mi-rename-2': function () { showOverlay(name); },
+    'mi-clear': clearChat,
+    'mi-signoff': function () { signOff(); addSys('signed off'); },
+    'mi-size-down': function () { setTextSize(prefSize() - SIZE_STEP); },
+    'mi-size-up': function () { setTextSize(prefSize() + SIZE_STEP); },
+    'mi-size-reset': function () { setTextSize(DEFAULT_SIZE); },
+    'mi-font-reset': function () {
+      localStorage.removeItem('blah-font');
+      fontSelect.value = DEFAULT_FONT;
+      applyPrefs();
+    },
+    'mi-buddies': function () {
+      localStorage.setItem('blah-buddies', prefBuddies() ? 'off' : 'on');
+      applyPrefs();
+    },
+    'mi-notify': toggleNotifications,
+    'mi-who': whoIsHere,
+    'mi-smile': function () { insertIntoInput(' :) '); },
+    'mi-wink': function () { insertIntoInput(' ;) '); },
+    'mi-grin': function () { insertIntoInput(' :D '); },
+    'mi-sad': function () { insertIntoInput(' :( '); },
+    'mi-heart': function () { insertIntoInput(' <3 '); },
+    'mi-slash-clear': function () { insertIntoInput('/clear'); }
+  };
+
+  Object.keys(ACTIONS).forEach(function (id) {
+    document.getElementById(id).addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeMenus();
+      ACTIONS[id]();
+    });
+  });
+
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeMenus();
+  });
+
+  document.getElementById('task').addEventListener('click', function () {
+    input.focus();
+  });
+
+  // ---- toolbar -----------------------------------------------------------
+  document.getElementById('sizeDown').addEventListener('click', function () {
+    setTextSize(prefSize() - SIZE_STEP);
+  });
+  document.getElementById('sizeUp').addEventListener('click', function () {
+    setTextSize(prefSize() + SIZE_STEP);
+  });
+  fontSelect.addEventListener('change', function () {
+    localStorage.setItem('blah-font', fontSelect.value);
+    applyPrefs();
+  });
+
+  // ---- clear + send ------------------------------------------------------
+  function clearChat() {
+    if (!name) return;
+    if (!confirm('Clear the chat history for everyone?')) return;
+    fetch('/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name })
+    }).then(function (r) {
+      if (r.status === 429) addSys('history was cleared a moment ago, try again');
+      else if (!r.ok) addSys('failed to clear history');
+    }).catch(function () {
+      addSys('failed to clear history');
+    });
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = input.value.trim();
+    if (!text || !name) return;
+    input.value = '';
+    if (text === '/clear') { clearChat(); return; }
+    fetch('/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, text: text })
+    }).then(function (r) {
+      if (r.status === 429) addSys('slow down, message not sent');
+      else if (!r.ok) addSys('message failed to send');
+    }).catch(function () {
+      addSys('message failed to send');
+    });
+    input.focus();
+  });
+
+  // ---- live updates ------------------------------------------------------
+  function setStatus(text, ok) {
+    statusEl.textContent = text;
+    statusEl.className = ok ? 'ok' : '';
   }
 
   function startPolling() {
@@ -430,80 +893,83 @@
           }
           var replay = resyncing;
           resyncing = false;
+          if (replay) showWelcome();
           data.messages.forEach(function (m) { addMsg(m, !replay); });
           if (nearBottom) log.scrollTop = log.scrollHeight;
-          setOnline(data.online);
+          setOnline(data.online, data.names);
           setStatus('online', true);
         })
-        .catch(function () { setStatus('reconnecting…', false); });
+        .catch(function () { setStatus('reconnecting\u2026', false); });
     }, 2000);
   }
 
-  var esOpened = false;
-  var es = new EventSource('/events');
-
-  es.onopen = function () {
-    esOpened = true;
-    setStatus('online', true);
-  };
-  es.onerror = function () {
-    setStatus('reconnecting…', false);
-  };
-  es.onmessage = function (e) {
-    var data = JSON.parse(e.data);
-    if (data.type === 'history') {
-      // Fresh stream: rebuild from scratch so reconnects self-heal. Messages
-      // that showed up while we were disconnected count as new, but only if
-      // this page already had a history loaded (so opening BLAH in a
-      // background tab doesn't fire a popup for every old message) and only
-      // if they are recent (so a long-dead tab doesn't wake up with a burst).
-      var previousId = lastId;
-      var missed = previousId > 0;
-      var cutoff = Date.now() - 120000;
-      log.innerHTML = '';
-      lastId = 0;
-      data.messages.forEach(function (m) {
-        addMsg(m, missed && m.id > previousId && m.time > cutoff);
-      });
-      log.scrollTop = log.scrollHeight;
-    } else if (data.type === 'message') {
-      addMsg(data.message, true);
-    } else if (data.type === 'cleared') {
-      log.innerHTML = '';
-      lastId = 0;
-      if (data.generation) generation = data.generation;
-      addSys(data.name + ' cleared the chat');
-    } else if (data.type === 'online') {
-      setOnline(data.count);
-    }
-  };
+  function connectStream() {
+    if (es) es.close();
+    esOpened = false;
+    es = new EventSource('/events?u=' + encodeURIComponent(name) + '&w=' + windowId);
+    es.onopen = function () {
+      esOpened = true;
+      setStatus('online', true);
+    };
+    es.onerror = function () {
+      setStatus('reconnecting\u2026', false);
+    };
+    es.onmessage = function (e) {
+      var data = JSON.parse(e.data);
+      if (data.type === 'history') {
+        // Fresh stream: rebuild from scratch so reconnects self-heal. Messages
+        // that showed up while we were disconnected count as new, but only if
+        // this window already had a history loaded (so opening BLAH in a
+        // background tab doesn't fire a popup for every old message) and only
+        // if they are recent (so a long-dead window doesn't wake up with a burst).
+        var previousId = lastId;
+        var missed = previousId > 0;
+        var cutoff = Date.now() - 120000;
+        log.innerHTML = '';
+        lastId = 0;
+        showWelcome();
+        data.messages.forEach(function (m) {
+          addMsg(m, missed && m.id > previousId && m.time > cutoff);
+        });
+        log.scrollTop = log.scrollHeight;
+      } else if (data.type === 'message') {
+        addMsg(data.message, true);
+      } else if (data.type === 'cleared') {
+        log.innerHTML = '';
+        lastId = 0;
+        if (data.generation) generation = data.generation;
+        addSys(data.name + ' cleared the chat');
+        showWelcome();
+      } else if (data.type === 'online') {
+        setOnline(data.count, data.names);
+      }
+    };
+  }
 
   // If the event stream can't get through, fall back to polling
+  connectStream();
   setTimeout(function () {
     if (!esOpened) {
-      es.close();
+      usingPolling = true;
+      if (es) es.close();
       startPolling();
     }
   }, 4000);
 
-  form.addEventListener('submit', function (e) {
-    e.preventDefault();
-    var text = input.value.trim();
-    if (!text || !name) return;
-    input.value = '';
-    if (text === '/clear') { clearChat(); return; }
-    fetch('/send', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: name, text: text })
-    }).then(function (r) {
-      if (r.status === 429) addSys('slow down, message not sent');
-      else if (!r.ok) addSys('message failed to send');
-    }).catch(function () {
-      addSys('message failed to send');
-    });
-    input.focus();
-  });
+  // ---- clock -------------------------------------------------------------
+  function tickClock() {
+    var now = new Date();
+    var hours = now.getHours();
+    var minutes = now.getMinutes();
+    var suffix = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+    clockEl.textContent = hours + ':' + (minutes < 10 ? '0' : '') + minutes + ' ' + suffix;
+  }
+  tickClock();
+  setInterval(tickClock, 20000);
+
+  applyPrefs();
 })();
 </script>
 </body>

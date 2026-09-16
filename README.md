@@ -5,11 +5,13 @@ No accounts, no passwords, no database. Open it from any device that can
 reach your Umbrel, pick a name, and start typing — everyone with the app
 open sees the same room.
 
-- Retro terminal look (green on black, monospace)
+- Dressed up like a 1990s instant messenger: blue title bar, grey beveled
+  buttons, white message pane, buddy list, Win98-style menus
 - Live messages over server-sent events, with a polling fallback
 - Username = whatever you type in once (a device name like `MacBook-Pro`
   works great); it's remembered by that browser
-- Shows how many chat windows are online
+- Buddy list showing who is signed on, plus a count of open chat windows
+- Text sizer (A- / A+) and font picker, remembered per browser
 - Desktop notifications: a popup with the sender and message when the chat is
   in a background tab (click it to jump back to the tab and reply)
 - History (last 200 messages) is stored on your Umbrel and survives
@@ -57,7 +59,7 @@ minute or two.
 Open BLAH from the dashboard, or skip the dashboard entirely and go to
 **http://umbrel.local:3747** on any device on your network — your MacBook,
 your roommate's PC, phones, whatever. Each person types a name once and
-it's remembered by that browser.
+it's remembered by that browser, via the little sign-on dialog.
 
 For notifications, open it at **https://umbrel.local:3747** instead: browsers
 only allow notifications on secure addresses. umbrelOS serves every app port
@@ -88,6 +90,26 @@ with the cursor in the input box, ready to reply.
   and reinstall — everything except notifications still works.
 - On iPhone and iPad, Safari only shows notifications for web apps added to
   the home screen, not for a normal tab.
+
+## Around the window
+
+- **Buddy list** (right hand panel) shows everyone signed on, each with their
+  own name colour. Names come from open browser windows and disappear when
+  they close; the number in the panel header counts windows, so two windows
+  using the same name count twice.
+- **Text sizer**: `A-` / `A+` next to the font dropdown, or
+  **View → Bigger / Smaller / Reset text size**. Default is bigger than the
+  old terminal look used to be, and the size, the font and the buddy-list
+  toggle are all remembered by your browser.
+- **Menus**: `File` (rename, clear history, sign off), `View` (text size, font,
+  buddy list, notifications), `Insert` (emoticons and the `/clear` command),
+  `People` (who's here, rename).
+- **Sending**: type and press Enter, or click **Send**. Your own messages are
+  lightly tinted so they are easy to spot.
+- `B`, `I`, `U` and the colour swatch in the toolbar are decoration — BLAH
+  messages are plain text, and each name gets its own colour automatically.
+  The title bar buttons are decoration too, and the taskbar button jumps your
+  cursor to the message box.
 
 ## Notes
 

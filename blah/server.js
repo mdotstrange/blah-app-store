@@ -18,8 +18,8 @@ let nextId = 1;
 let generation = 1; // bumped on every clear so polling clients can detect it
 let lastClear = 0;
 const messages = []; // {id, name, text, time}
-const sseClients = new Set();
-const pollers = new Map(); // window id -> last seen (ms)
+const sseClients = new Map(); // res -> {name}
+const pollers = new Map(); // window id -> {name, seen}
 const sendTimes = new Map(); // name -> recent send timestamps
 
 const indexHtml = fs.readFileSync(path.join(__dirname, 'public', 'index.html'));
@@ -92,11 +92,11 @@ function safeWrite(res, line) {
 
 function broadcast(payload) {
   const line = `data: ${JSON.stringify(payload)}\n\n`;
-  for (const res of sseClients) safeWrite(res, line);
+  for (const res of sseClients.keys()) safeWrite(res, line);
 }
 
-function addClient(req, res) {
-  sseClients.add(res);
+function addClient(req, res, name) {
+  sseClients.set(res, { name });
   res.on('error', () => dropClient(res));
   req.on('close', () => dropClient(res));
 }
@@ -114,15 +114,24 @@ function dropClient(res) {
 function onlineCount() {
   const cutoff = Date.now() - POLL_TIMEOUT_MS;
   let pollCount = 0;
-  for (const [id, seen] of pollers) {
-    if (seen < cutoff) pollers.delete(id);
+  for (const [id, poller] of pollers) {
+    if (poller.seen < cutoff) pollers.delete(id);
     else pollCount++;
   }
   return sseClients.size + pollCount;
 }
 
+// Screen names of everyone signed on, for the buddy list. Clients that never
+// told us a name (older pages, or a poll straight after a reload) are skipped.
+function onlineNames() {
+  const names = new Set();
+  for (const client of sseClients.values()) if (client.name) names.add(client.name);
+  for (const poller of pollers.values()) if (poller.name) names.add(poller.name);
+  return [...names].sort((a, b) => a.localeCompare(b));
+}
+
 function broadcastOnline() {
-  broadcast({ type: 'online', count: onlineCount() });
+  broadcast({ type: 'online', count: onlineCount(), names: onlineNames() });
 }
 
 // Simple per-name flood control for /send. Anyone can rename to dodge it, but
@@ -141,7 +150,7 @@ function tooFast(name) {
 
 function pruneTracking() {
   const now = Date.now();
-  for (const [id, seen] of pollers) if (seen < now - POLL_TIMEOUT_MS) pollers.delete(id);
+  for (const [id, poller] of pollers) if (poller.seen < now - POLL_TIMEOUT_MS) pollers.delete(id);
   for (const [name, times] of sendTimes) {
     const recent = times.filter(t => now - t < SEND_WINDOW_MS);
     if (recent.length === 0) sendTimes.delete(name);
@@ -152,7 +161,7 @@ function pruneTracking() {
 // Keep SSE connections alive through proxies
 setInterval(() => {
   pruneTracking();
-  for (const res of sseClients) safeWrite(res, ': hb\n\n');
+  for (const res of sseClients.keys()) safeWrite(res, ': hb\n\n');
 }, 25000);
 
 const server = http.createServer((req, res) => {
@@ -173,7 +182,7 @@ const server = http.createServer((req, res) => {
       'X-Accel-Buffering': 'no',
     });
     res.write('\n');
-    addClient(req, res);
+    addClient(req, res, String(url.searchParams.get('u') || '').trim().slice(0, MAX_NAME));
     res.write(`data: ${JSON.stringify({ type: 'history', messages })}\n\n`);
     broadcastOnline();
     return;
@@ -184,14 +193,15 @@ const server = http.createServer((req, res) => {
     const since = Number(url.searchParams.get('since')) || 0;
     // Key on the chat window: behind Umbrel's app proxy every poll arrives
     // from the proxy's IP, so remoteAddress can't tell devices apart. The name
-    // is only a fallback for older clients that don't send a window id.
-    const who = String(url.searchParams.get('u') || req.socket.remoteAddress).slice(0, MAX_NAME);
-    const windowId = String(url.searchParams.get('w') || who).slice(0, 64);
-    pollers.set(windowId, Date.now());
+    // feeds the buddy list, and doubles as a fallback window id.
+    const who = String(url.searchParams.get('u') || '').trim().slice(0, MAX_NAME);
+    const windowId = String(url.searchParams.get('w') || who || req.socket.remoteAddress || 'anon').slice(0, 64);
+    pollers.set(windowId, { name: who, seen: Date.now() });
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
     res.end(JSON.stringify({
       messages: messages.filter(m => m.id > since),
       online: onlineCount(),
+      names: onlineNames(),
       generation,
     }));
     return;
