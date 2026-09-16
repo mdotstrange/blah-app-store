@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Runs on the Umbrel (as root) before the container starts. Versions up to
+# 1.10.0 ran BLAH as root, so the chat history, to-do list and shared files
+# they wrote are root-owned. The container now runs as uid 1000, so hand that
+# data over. Harmless on a fresh install and every start after the first.
+set -euo pipefail
+data_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/data"
+mkdir -p "${data_dir}"
+chown -R 1000:1000 "${data_dir}"
