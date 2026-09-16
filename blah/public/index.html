@@ -147,7 +147,7 @@
     <h1>BLAH</h1>
     <span id="status">connecting…</span>
     <span id="online"></span>
-    <span id="me">&lt;<span id="myname"></span>&gt; <button id="rename" type="button">rename</button></span>
+    <span id="me">&lt;<span id="myname"></span>&gt; <button id="rename" type="button">rename</button> <button id="clear" type="button" title="wipe the history for everyone">clear</button></span>
   </header>
 
   <div id="log"></div>
@@ -212,6 +212,22 @@
     showOverlay(name);
   });
 
+  var generation = null;
+
+  function clearChat() {
+    if (!name) return;
+    if (!confirm('Clear the chat history for everyone?')) return;
+    fetch('/clear', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name })
+    }).catch(function () {
+      addSys('failed to clear history');
+    });
+  }
+
+  document.getElementById('clear').addEventListener('click', clearChat);
+
   if (!name) showOverlay('user-' + Math.floor(1000 + Math.random() * 9000));
   else mynameEl.textContent = name;
 
@@ -269,6 +285,14 @@
       fetch('/messages?since=' + lastId + '&u=' + encodeURIComponent(name))
         .then(function (r) { return r.json(); })
         .then(function (data) {
+          if (generation === null) {
+            generation = data.generation;
+          } else if (data.generation !== generation) {
+            generation = data.generation;
+            log.innerHTML = '';
+            lastId = 0;
+            addSys('chat history was cleared');
+          }
           data.messages.forEach(addMsg);
           if (nearBottom) log.scrollTop = log.scrollHeight;
           setOnline(data.online);
@@ -291,10 +315,18 @@
   es.onmessage = function (e) {
     var data = JSON.parse(e.data);
     if (data.type === 'history') {
+      // Fresh stream: rebuild from scratch so reconnects self-heal
+      log.innerHTML = '';
+      lastId = 0;
       data.messages.forEach(addMsg);
       log.scrollTop = log.scrollHeight;
     } else if (data.type === 'message') {
       addMsg(data.message);
+    } else if (data.type === 'cleared') {
+      log.innerHTML = '';
+      lastId = 0;
+      if (data.generation) generation = data.generation;
+      addSys(data.name + ' cleared the chat');
     } else if (data.type === 'online') {
       setOnline(data.count);
     }
@@ -313,6 +345,7 @@
     var text = input.value.trim();
     if (!text || !name) return;
     input.value = '';
+    if (text === '/clear') { clearChat(); return; }
     fetch('/send', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

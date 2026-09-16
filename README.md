@@ -10,8 +10,9 @@ open sees the same room.
 - Username = whatever you type in once (a device name like `MacBook-Pro`
   works great); it's remembered by that browser
 - Shows how many chat windows are online
-- History is the last 200 messages, kept in memory only — restarting the
-  app wipes it
+- History (last 200 messages) is stored on your Umbrel and survives
+  restarts; anyone in the room can wipe it with the clear button or by
+  sending `/clear`
 
 ## Install on your Umbrel (umbrelOS 1.x)
 
@@ -85,7 +86,8 @@ container. Copy the `blah/` folder to your Umbrel, then over SSH:
 ```bash
 cd ~/blah
 docker build -t blah .
-docker run -d --name blah --restart unless-stopped -p 3747:3000 blah
+docker run -d --name blah --restart unless-stopped -p 3747:3000 \
+  -e DATA_DIR=/data -v blah-data:/data blah
 ```
 
 Chat is at http://umbrel.local:3747. Downsides: no dashboard tile, and

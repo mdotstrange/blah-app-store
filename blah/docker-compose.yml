@@ -14,6 +14,11 @@ services:
     # Intentionally no `image:` key - umbreld tries to pull every image it
     # finds and the install would fail for a local-only image.
     build: .
-    user: "1000:1000"
     init: true
     restart: on-failure
+    # Runs as root so it can write the mounted data dir
+    environment:
+      DATA_DIR: /data
+    volumes:
+      # Chat history lives here on the Umbrel (survives restarts/updates)
+      - ${APP_DATA_DIR}/data:/data

@@ -1,0 +1,2 @@
+# Keeps the data dir in the repo. Umbrel bind-mounts it at /data for
+# persistent chat history (messages.json is written here at runtime).

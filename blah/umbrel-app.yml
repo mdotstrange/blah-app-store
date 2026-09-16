@@ -2,7 +2,7 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.0.0"
+version: "1.1.0"
 tagline: A dead-simple local chat room
 description: >-
   BLAH is a tiny early-internet-style chat room for your local network.
@@ -13,10 +13,12 @@ description: >-
   with the app open sees the same room.
 
 
-  Chat history lives only in memory (last 200 messages) and disappears
-  whenever the app restarts.
+  The last 200 messages are stored on your Umbrel and survive app
+  restarts. Anyone in the room can wipe the history for everyone with
+  the clear button.
 releaseNotes: >-
-  First release.
+  Chat history now persists on your Umbrel (survives app restarts), and a
+  new clear button (or sending /clear) wipes it for everyone.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []
