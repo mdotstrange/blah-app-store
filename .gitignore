@@ -1,4 +1,5 @@
-# Written by local test runs
-blah/data/messages.json
-blah/data/messages.json.tmp
-blah/data/.write-test
+# Written by local test runs (chat history, to-do list, day notes)
+blah/data/*
+!blah/data/.gitkeep
+dev.bat
+dev-reset.bat

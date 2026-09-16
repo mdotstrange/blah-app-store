@@ -2,7 +2,7 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.4.0"
+version: "1.10.0"
 tagline: A dead-simple local chat room
 icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
@@ -20,12 +20,11 @@ description: >-
   restarts. Anyone in the room can wipe the history for everyone with
   the clear button.
 releaseNotes: >-
-  All-new look: light mode and a proper 1990s instant messenger window - blue
-  title bar, menus, beveled buttons, white message pane and a buddy list
-  showing who is signed on. Bigger text by default, with an A- / A+ text sizer
-  and a font picker that are remembered per browser, and messages now show
-  each person in their own colour. File/View/Insert/People menus replace the
-  old header buttons (rename, clear, sign off, notifications, emoticons).
+  Share files in the chat: drag a file onto the window and everyone sees it as a
+  named chip with a file-type icon and its size. Clicking a chip downloads the
+  file under its original name. Files live on your Umbrel (data/files), survive
+  restarts, and are cleaned up when the history is cleared or the chat rolls
+  over.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []

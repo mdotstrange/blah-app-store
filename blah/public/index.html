@@ -17,6 +17,7 @@
     --title-b: #1084d0;
     --buddy-bg: #ededed;
     --msg-size: 18px;
+    --ui-size: 12px; /* side panel text: to-do list, calendar, buddy list */
     --msg-font: Georgia, "Times New Roman", serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -95,15 +96,24 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    padding: 0;
     background: #1866c8;
     border: 1px solid;
     border-color: #7fb0ff #001d5e #001d5e #7fb0ff;
     color: #fff;
     font: bold 10px/1 Tahoma, sans-serif;
-    cursor: default;
+    cursor: pointer;
     user-select: none;
   }
+  .tb-btn:hover { background: #2f7fe0; }
+  .tb-btn:active { transform: translate(1px, 1px); }
   .tb-btn.close { background: #d24d2a; border-color: #ffb9a3 #7a2208 #7a2208 #ffb9a3; }
+  .tb-btn.close:hover { background: #e2623c; }
+
+  /* maximised: fill the screen, leaving just a sliver of desktop showing */
+  #desktop.maximized { padding: 12px; }
+  #desktop.maximized .window { width: 100%; height: 100%; }
+  #desktop.maximized .rail { width: clamp(252px, 26vw, 430px); }
 
   /* ---------- menu bar ---------- */
   .menubar {
@@ -166,17 +176,70 @@
   .msg.mine { background: #f2f5ff; }
   .sys { color: #6b6b6b; font-style: italic; }
 
+  /* ---------- shared files ---------- */
+  .file {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    margin-left: 4px;
+    padding: 0 4px;
+    color: #000082;
+    text-decoration: none;
+    border: 1px solid transparent;
+    vertical-align: middle;
+  }
+  .file:hover { background: #eef2ff; border-color: var(--title-a); text-decoration: underline; }
+  .file-icon {
+    position: relative;
+    flex: none;
+    width: calc(var(--msg-size) * 0.78);
+    height: calc(var(--msg-size) * 0.92);
+    background: #fff;
+    border: 1px solid #5c5c5c;
+    box-shadow: inset -2px -2px 0 rgba(0, 0, 0, 0.08);
+  }
+  .file-icon::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 42%;
+    height: 42%;
+    background: var(--face);
+    border-left: 1px solid #5c5c5c;
+    border-bottom: 1px solid #5c5c5c;
+  }
+  .file-icon.kind-image { background: #dceeff; }
+  .file-icon.kind-pdf { background: #ffdede; }
+  .file-icon.kind-archive { background: #fff0cc; }
+  .file-icon.kind-audio { background: #e8ddff; }
+  .file-icon.kind-video { background: #ffe0f0; }
+  .file-icon.kind-text { background: #e6f5e6; }
+  .file-icon.kind-code { background: #e0f2f2; }
+  .file-name { font-weight: bold; overflow-wrap: anywhere; }
+  .file-size { flex: none; color: var(--shadow); font-family: Tahoma, sans-serif; font-size: 0.7em; }
+
+  /* shown while a file is dragged over the window */
+  #desktop.dragover::after {
+    content: "Drop files here to share them";
+    position: fixed;
+    inset: 10px;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px dashed var(--title-a);
+    background: rgba(255, 255, 255, 0.82);
+    color: #000082;
+    font-family: Tahoma, "MS Sans Serif", Verdana, sans-serif;
+    font-size: 18px;
+    font-weight: bold;
+    pointer-events: none;
+  }
+
   /* ---------- formatting toolbar ---------- */
   .toolbar { flex: none; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
-  .deco { cursor: default; }
-  .swatch {
-    width: 22px;
-    height: 22px;
-    flex: none;
-    background: #8000a0;
-    border: 2px solid;
-    border-color: var(--dark) var(--hilite) var(--hilite) var(--dark);
-  }
   #sizeLabel { font-size: 11px; color: var(--dark); padding: 0 2px; min-width: 34px; }
 
   /* ---------- win98 buttons ---------- */
@@ -215,10 +278,30 @@
   }
   #send { width: 76px; font-size: 12px; }
 
-  .sidebar { flex: none; width: 200px; display: flex; flex-direction: column; gap: 2px; }
-  .sidebar-header {
+  /* ---------- right hand rail: buddies, to-do list, calendar ---------- */
+  .rail {
+    flex: none;
+    width: 252px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* drag handles: side panel width, and the to-do/calendar split */
+  .split { flex: none; background: var(--face); touch-action: none; }
+  .split-v { width: 5px; cursor: col-resize; }
+  .split-h { height: 5px; cursor: row-resize; }
+  .split:hover, .split.dragging { background: #9c9c9c; }
+  .panel { display: flex; flex-direction: column; min-height: 0; gap: 3px; }
+  .panel-buddies { flex: 0 1 auto; max-height: 132px; }
+  .panel-todo { flex: 1 1 auto; min-height: 108px; }
+  .panel-calendar { flex: 0 0 auto; min-height: 150px; }
+  .panel-header {
     flex: none;
     display: flex;
+    align-items: center;
     justify-content: space-between;
     gap: 6px;
     padding: 2px 5px;
@@ -226,20 +309,128 @@
     border: 2px solid;
     border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
     font-weight: bold;
-    font-size: 12px;
+    font-size: var(--ui-size);
   }
   #online { font-weight: normal; color: var(--dark); }
-  .buddy-list {
+  .list {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
-    background: var(--buddy-bg);
+    background: #fff;
     border: 2px solid;
     border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
   }
-  .buddy { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font-size: 14px; }
-  .buddy .dot { flex: none; width: 10px; height: 10px; border: 1px solid rgba(0, 0, 0, 0.35); }
-  .buddy.dim { color: var(--shadow); font-size: 12px; padding: 6px; }
+  .buddy-list { background: var(--buddy-bg); }
+  .buddy { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font-size: calc(var(--ui-size) + 2px); }
+  .buddy .dot { flex: none; width: calc(var(--ui-size) * 0.85); height: calc(var(--ui-size) * 0.85); border: 1px solid rgba(0, 0, 0, 0.35); }
+  .buddy.dim { color: var(--shadow); font-size: var(--ui-size); padding: 6px; }
+
+  .todo-list { padding: 2px; }
+  .task { display: flex; align-items: flex-start; gap: 4px; padding: 2px 3px; font-size: var(--ui-size); line-height: 1.3; }
+  .task + .task { border-top: 1px dotted #d4d4d4; }
+  .task input[type="checkbox"] {
+    flex: none;
+    width: var(--ui-size);
+    height: var(--ui-size);
+    margin-top: calc(var(--ui-size) * 0.15);
+  }
+  .task-body { flex: 1; min-width: 0; }
+  .task-text { overflow-wrap: anywhere; }
+  .task.done .task-text { text-decoration: line-through; color: #8a8a8a; }
+  .task-meta { color: #8a8a8a; font-size: calc(var(--ui-size) - 2px); }
+  .task-edit {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: var(--ui-size);
+    padding: 1px 3px;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+  }
+  .task-btn {
+    flex: none;
+    width: calc(var(--ui-size) * 1.5);
+    height: calc(var(--ui-size) * 1.33);
+    padding: 0;
+    font-size: calc(var(--ui-size) - 2px);
+    line-height: 1;
+    color: #000;
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    cursor: pointer;
+  }
+  .task-btn:active { transform: translate(1px, 1px); }
+  .todo-empty { padding: 4px; color: var(--shadow); font-size: calc(var(--ui-size) - 1px); }
+  .todo-add { flex: none; display: flex; gap: 3px; }
+  .todo-add input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: var(--ui-size);
+    padding: 2px 4px;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+  }
+  .todo-add .btn { font-size: calc(var(--ui-size) - 1px); padding: 1px 7px; }
+
+  .cal-title { flex: 1; text-align: center; font-weight: bold; }
+  .cal-nav {
+    flex: none;
+    width: calc(var(--ui-size) * 1.5);
+    height: calc(var(--ui-size) * 1.33);
+    padding: 0;
+    font-size: calc(var(--ui-size) - 3px);
+    line-height: 1;
+    color: #000;
+    background: var(--face);
+    border: 2px solid;
+    border-color: var(--hilite) var(--dark) var(--dark) var(--hilite);
+    cursor: pointer;
+  }
+  .calendar {
+    flex: 1 1 auto;
+    min-height: 90px;
+    display: flex;
+    flex-direction: column;
+    overflow: auto; /* if huge text outgrows a small panel, scroll rather than spill */
+    padding: 3px;
+    background: #fff;
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+  }
+  /* the grid stretches to whatever size the panel is dragged to */
+  .cal-grid { flex: 1; display: grid; grid-template-columns: repeat(7, 1fr); grid-auto-rows: 1fr; }
+  .cal-cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: calc(var(--ui-size) * 1.85);
+    font-size: var(--ui-size);
+    cursor: pointer;
+  }
+  .cal-cell.head { font-weight: bold; color: var(--dark); font-size: calc(var(--ui-size) - 1px); cursor: default; }
+  .cal-cell.out { visibility: hidden; }
+  .cal-cell.today { background: var(--title-a); color: #fff; font-weight: bold; }
+  .cal-cell.selected { border: 1px solid #cc0000; }
+  .cal-cell.has-events::after { content: ""; position: absolute; left: 1px; bottom: 1px; width: calc(var(--ui-size) * 0.34); height: calc(var(--ui-size) * 0.34); background: #cc0000; }
+  .cal-cell.has-note::before { content: ""; position: absolute; right: 1px; top: 1px; width: calc(var(--ui-size) * 0.34); height: calc(var(--ui-size) * 0.34); background: #006600; }
+  .note-box { display: flex; flex-direction: column; gap: 3px; }
+  .note-day { display: flex; justify-content: space-between; gap: 4px; font-size: calc(var(--ui-size) - 1px); color: var(--dark); }
+  .day-events { max-height: calc(var(--ui-size) * 2.85); overflow-y: auto; font-size: calc(var(--ui-size) - 2px); color: #555; }
+  #noteInput {
+    width: 100%;
+    min-height: calc(var(--ui-size) * 2.85);
+    padding: 2px 4px;
+    font: inherit;
+    font-size: calc(var(--ui-size) - 1px);
+    border: 2px solid;
+    border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
+    resize: vertical;
+  }
+  .note-actions { display: flex; gap: 3px; }
+  .note-actions .btn { flex: 1; font-size: calc(var(--ui-size) - 1px); padding: 1px 4px; }
 
   /* ---------- taskbar ---------- */
   .taskbar {
@@ -304,9 +495,9 @@
   .dialog-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 14px; }
 
   @media (max-width: 720px) {
-    #desktop { padding: 0; }
-    .window { width: 100%; height: 100%; border: none; box-shadow: none; }
-    .sidebar { display: none; }
+    #desktop, #desktop.maximized { padding: 0; }
+    .window, #desktop.maximized .window { width: 100%; height: 100%; border: none; box-shadow: none; }
+    .rail { display: none; }
     .menubar { flex-wrap: wrap; }
   }
 </style>
@@ -314,13 +505,13 @@
 <body>
   <div id="desktop">
     <div class="window">
-      <div class="titlebar">
+      <div class="titlebar" id="titlebar">
         <span class="logo" aria-hidden="true"></span>
         <span class="title">BLAH Instant Message</span>
-        <span class="tb-buttons" aria-hidden="true" title="just for show">
-          <span class="tb-btn">_</span>
-          <span class="tb-btn">&#9633;</span>
-          <span class="tb-btn close">&#10005;</span>
+        <span class="tb-buttons">
+          <button class="tb-btn" id="tbMin" type="button" title="minimise - back to the normal size">_</button>
+          <button class="tb-btn" id="tbMax" type="button" title="maximise - fill the screen">&#9633;</button>
+          <button class="tb-btn close" id="tbClose" type="button" title="sign off (same as File &gt; Sign off)">&#10005;</button>
         </span>
       </div>
 
@@ -340,7 +531,8 @@
             <div class="menu-item" id="mi-size-up">Bigger text</div>
             <div class="menu-item" id="mi-size-reset">Reset text size</div>
             <div class="menu-item" id="mi-font-reset">Reset font</div>
-            <div class="menu-item" id="mi-buddies">Show buddy list</div>
+            <div class="menu-item" id="mi-reset-sizes">Reset panel sizes</div>
+            <div class="menu-item" id="mi-buddies">Show side panel</div>
             <div class="menu-item" id="mi-notify">Notifications</div>
           </div>
         </span>
@@ -365,7 +557,7 @@
         <span class="status-area"><span id="status">connecting&#8230;</span></span>
       </div>
 
-      <div class="client">
+      <div class="client" id="client">
         <div class="pane">
           <div id="log"></div>
           <div class="toolbar">
@@ -381,10 +573,6 @@
             <button class="btn" id="sizeDown" type="button" title="smaller message text">A-</button>
             <button class="btn" id="sizeUp" type="button" title="bigger message text">A+</button>
             <span id="sizeLabel"></span>
-            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><b>B</b></button>
-            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><i>I</i></button>
-            <button class="btn deco" type="button" title="cosmetic - BLAH messages are plain text"><u>U</u></button>
-            <span class="swatch deco" title="cosmetic - names get their own colours automatically"></span>
             <button class="btn" id="notify" type="button">notify off</button>
           </div>
           <form id="form" class="compose">
@@ -392,9 +580,40 @@
             <button class="btn" id="send" type="submit">Send</button>
           </form>
         </div>
-        <div class="sidebar" id="sidebar">
-          <div class="sidebar-header"><span>Online</span><span id="online"></span></div>
-          <div class="buddy-list" id="buddyList"></div>
+        <div class="split split-v" id="splitRail" title="drag to resize the side panel (double-click to reset)"></div>
+        <div class="rail" id="rail">
+          <div class="panel panel-buddies">
+            <div class="panel-header"><span>Online</span><span id="online"></span></div>
+            <div class="list buddy-list" id="buddyList"></div>
+          </div>
+
+          <div class="panel panel-todo">
+            <div class="panel-header"><span>To Do</span><span id="todoCount"></span></div>
+            <div class="list todo-list" id="todoList"></div>
+            <form class="todo-add" id="todoForm">
+              <input id="todoInput" maxlength="200" autocomplete="off" placeholder="Add a task">
+              <button class="btn" type="submit">Add</button>
+            </form>
+          </div>
+
+          <div class="split split-h" id="splitCalendar" title="drag to resize the calendar (double-click to reset)"></div>
+          <div class="panel panel-calendar" id="panelCalendar">
+            <div class="panel-header">
+              <button class="cal-nav" id="calPrev" type="button" title="previous month">&#9664;</button>
+              <span class="cal-title" id="calTitle"></span>
+              <button class="cal-nav" id="calNext" type="button" title="next month">&#9654;</button>
+            </div>
+            <div class="calendar" id="calendar"></div>
+            <div class="note-box">
+              <div class="note-day"><span id="noteDay"></span><span id="dayEventCount"></span></div>
+              <div class="day-events" id="dayEvents"></div>
+              <textarea id="noteInput" rows="2" maxlength="1000" placeholder="Note for this day"></textarea>
+              <div class="note-actions">
+                <button class="btn" id="noteSave" type="button">Save note</button>
+                <button class="btn" id="noteClear" type="button">Clear</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -430,10 +649,27 @@
   var mynameEl = document.getElementById('myname');
   var notifyBtn = document.getElementById('notify');
   var buddyListEl = document.getElementById('buddyList');
-  var sidebarEl = document.getElementById('sidebar');
+  var railEl = document.getElementById('rail');
   var fontSelect = document.getElementById('fontSelect');
   var sizeLabel = document.getElementById('sizeLabel');
   var clockEl = document.getElementById('clock');
+  var todoListEl = document.getElementById('todoList');
+  var todoForm = document.getElementById('todoForm');
+  var todoInput = document.getElementById('todoInput');
+  var todoCountEl = document.getElementById('todoCount');
+  var calendarEl = document.getElementById('calendar');
+  var calTitleEl = document.getElementById('calTitle');
+  var noteDayEl = document.getElementById('noteDay');
+  var dayEventsEl = document.getElementById('dayEvents');
+  var dayEventCountEl = document.getElementById('dayEventCount');
+  var noteInput = document.getElementById('noteInput');
+  var desktopEl = document.getElementById('desktop');
+  var titlebarEl = document.getElementById('titlebar');
+  var tbMaxBtn = document.getElementById('tbMax');
+  var splitRailEl = document.getElementById('splitRail');
+  var splitCalendarEl = document.getElementById('splitCalendar');
+  var panelCalendarEl = document.getElementById('panelCalendar');
+  var clientEl = document.getElementById('client');
 
   var name = localStorage.getItem('blah-name') || '';
   // Random per-window id so two windows using the same name still count as
@@ -463,17 +699,133 @@
     return localStorage.getItem('blah-font') || fontSelect.value;
   }
 
-  function prefBuddies() {
-    return localStorage.getItem('blah-buddies') !== 'off';
+  function prefRail() {
+    return localStorage.getItem('blah-rail') !== 'off';
   }
+
+  function prefMaximized() {
+    return localStorage.getItem('blah-maximized') === 'on';
+  }
+
+  function applyMaximized() {
+    var maximized = prefMaximized();
+    if (maximized) desktopEl.classList.add('maximized');
+    else desktopEl.classList.remove('maximized');
+    tbMaxBtn.title = maximized ? 'restore the normal size' : 'maximise - fill the screen';
+  }
+
+  function setMaximized(on) {
+    localStorage.setItem('blah-maximized', on ? 'on' : 'off');
+    applyMaximized();
+  }
+
+  // ---- resizable panels --------------------------------------------------
+  var RAIL_MIN = 180; // narrowest the side panel may get
+  var RAIL_GUTTER = 320; // room kept for the messages
+  var CAL_MIN = 190; // shortest the calendar panel may get
+  var CAL_RESERVED = 200; // room kept for the buddy list and the to-do list
+
+  function storedSize(key, min, max) {
+    var stored = parseInt(localStorage.getItem(key), 10);
+    return stored >= min && stored <= max ? stored : 0;
+  }
+
+  function measured(el, fallback, axis) {
+    if (typeof el.getBoundingClientRect === 'function') {
+      var rect = el.getBoundingClientRect();
+      if (rect && rect[axis]) return rect[axis];
+    }
+    return fallback;
+  }
+
+  function applySizes() {
+    var width = storedSize('blah-rail-width', RAIL_MIN, 1200);
+    if (width) {
+      // Never let a saved width squeeze the messages out on a narrow window
+      var room = Math.max(RAIL_MIN, measured(clientEl, 1100, 'width') - RAIL_GUTTER);
+      railEl.style.width = Math.round(Math.min(width, room)) + 'px';
+    } else {
+      railEl.style.width = '';
+    }
+    var height = storedSize('blah-calendar-height', CAL_MIN, 2000);
+    if (height) {
+      var space = Math.max(CAL_MIN, measured(railEl, 600, 'height') - CAL_RESERVED);
+      panelCalendarEl.style.height = Math.round(Math.min(height, space)) + 'px';
+    } else {
+      panelCalendarEl.style.height = '';
+    }
+  }
+
+  function remember(key, el, axis, fallback) {
+    localStorage.setItem(key, String(Math.round(parseFloat(el.style[axis]) || fallback)));
+  }
+
+  function dragHandle(handle, measure, onDrag, onDrop) {
+    handle.addEventListener('pointerdown', function (e) {
+      if (e.preventDefault) e.preventDefault();
+      var start = measure(); // measured once, so the drag tracks the pointer exactly
+      var origin = {x: e.clientX, y: e.clientY};
+      handle.classList.add('dragging');
+      function move(ev) {
+        onDrag(start, ev.clientX - origin.x, ev.clientY - origin.y);
+      }
+      function up() {
+        document.removeEventListener('pointermove', move);
+        document.removeEventListener('pointerup', up);
+        handle.classList.remove('dragging');
+        onDrop();
+      }
+      document.addEventListener('pointermove', move);
+      document.addEventListener('pointerup', up);
+    });
+  }
+
+  dragHandle(
+    splitRailEl,
+    function () {
+      return {size: measured(railEl, 252, 'width'), room: measured(clientEl, 1100, 'width')};
+    },
+    function (start, dx) {
+      var max = Math.max(RAIL_MIN, start.room - RAIL_GUTTER);
+      railEl.style.width = Math.round(Math.max(RAIL_MIN, Math.min(max, start.size - dx))) + 'px';
+    },
+    function () { remember('blah-rail-width', railEl, 'width', 252); },
+  );
+
+  dragHandle(
+    splitCalendarEl,
+    function () {
+      return {size: measured(panelCalendarEl, 250, 'height'), room: measured(railEl, 600, 'height')};
+    },
+    function (start, dx, dy) {
+      var max = Math.max(CAL_MIN, start.room - CAL_RESERVED);
+      panelCalendarEl.style.height = Math.round(Math.max(CAL_MIN, Math.min(max, start.size - dy))) + 'px';
+    },
+    function () { remember('blah-calendar-height', panelCalendarEl, 'height', 250); },
+  );
+
+  // double-click a divider to go back to the automatic size
+  splitRailEl.addEventListener('dblclick', function () {
+    localStorage.removeItem('blah-rail-width');
+    railEl.style.width = '';
+  });
+  splitCalendarEl.addEventListener('dblclick', function () {
+    localStorage.removeItem('blah-calendar-height');
+    panelCalendarEl.style.height = '';
+  });
 
   function applyPrefs() {
     var size = prefSize();
     document.documentElement.style.setProperty('--msg-size', size + 'px');
+    // The side panel (to-do list, calendar, buddy list) rides along with the
+    // same preference, kept in proportion and clamped so it stays readable
+    document.documentElement.style.setProperty('--ui-size', Math.min(26, Math.max(10, Math.round(size * (2 / 3)))) + 'px');
     document.documentElement.style.setProperty('--msg-font', prefFont());
     sizeLabel.textContent = size + 'px';
     fontSelect.value = prefFont();
-    sidebarEl.style.display = prefBuddies() ? '' : 'none';
+    railEl.style.display = prefRail() ? '' : 'none';
+    applyMaximized();
+    applySizes();
     renderNotifyButton();
     renderMenuState();
   }
@@ -553,12 +905,15 @@
     who.style.color = buddyColor(m.name);
     who.textContent = m.name + ':';
 
-    var text = document.createElement('span');
-    text.textContent = ' ' + m.text;
-
     div.appendChild(time);
     div.appendChild(who);
-    div.appendChild(text);
+    if (m.file) {
+      div.appendChild(fileChip(m.file));
+    } else {
+      var text = document.createElement('span');
+      text.textContent = ' ' + m.text;
+      div.appendChild(text);
+    }
     log.appendChild(div);
 
     while (log.children.length > 250) log.removeChild(log.firstChild);
@@ -578,6 +933,108 @@
     if (!name || log.children.length) return;
     addSys('Welcome, ' + name + '! You are online.');
   }
+
+  // ---- sharing files -----------------------------------------------------
+  var MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+  function formatSize(bytes) {
+    var size = Number(bytes) || 0;
+    if (size >= 1024 * 1024) return (size / (1024 * 1024)).toFixed(size >= 10 * 1024 * 1024 ? 0 : 1) + ' MB';
+    if (size >= 1024) return Math.round(size / 1024) + ' KB';
+    return size + ' B';
+  }
+
+  function fileKind(fileName, type) {
+    var name = String(fileName || '').toLowerCase();
+    var mime = String(type || '').toLowerCase();
+    var ext = name.indexOf('.') === -1 ? '' : name.slice(name.lastIndexOf('.') + 1);
+    var has = function (list) { return list.indexOf(ext) !== -1; };
+    if (mime.indexOf('image/') === 0 || has(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'heic', 'avif'])) return 'image';
+    if (mime === 'application/pdf' || ext === 'pdf') return 'pdf';
+    if (has(['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'])) return 'archive';
+    if (mime.indexOf('audio/') === 0 || has(['mp3', 'wav', 'ogg', 'flac', 'm4a'])) return 'audio';
+    if (mime.indexOf('video/') === 0 || has(['mp4', 'mov', 'mkv', 'webm', 'avi'])) return 'video';
+    // the extension check comes first: .js and .html arrive as text/*
+    if (has(['js', 'ts', 'json', 'html', 'css', 'py', 'sh', 'yml', 'yaml', 'xml', 'c', 'go', 'rs', 'java'])) return 'code';
+    if (mime.indexOf('text/') === 0 || has(['txt', 'md', 'log', 'csv', 'rtf'])) return 'text';
+    return 'other';
+  }
+
+  function fileChip(file) {
+    var link = document.createElement('a');
+    link.className = 'file';
+    link.href = '/files/' + encodeURIComponent(file.id);
+    link.download = file.name;
+    link.title = file.name + ' (' + formatSize(file.size) + ') - click to download';
+
+    var icon = document.createElement('span');
+    icon.className = 'file-icon kind-' + fileKind(file.name, file.type);
+
+    var label = document.createElement('span');
+    label.className = 'file-name';
+    label.textContent = file.name;
+
+    var size = document.createElement('span');
+    size.className = 'file-size';
+    size.textContent = formatSize(file.size);
+
+    link.appendChild(icon);
+    link.appendChild(label);
+    link.appendChild(size);
+    return link;
+  }
+
+  function showDropHint(on) {
+    if (on) desktopEl.classList.add('dragover');
+    else desktopEl.classList.remove('dragover');
+  }
+
+  function uploadFiles(files) {
+    if (!files.length) return;
+    if (!name) {
+      addSys('pick a screen name before sharing files');
+      return;
+    }
+    files.forEach(function (file) {
+      if (file.size > MAX_FILE_BYTES) {
+        addSys(file.name + ' is too big to share (limit ' + formatSize(MAX_FILE_BYTES) + ')');
+        return;
+      }
+      addSys('sending ' + file.name + ' (' + formatSize(file.size) + ')');
+      fetch('/upload?u=' + encodeURIComponent(name) + '&n=' + encodeURIComponent(file.name), {
+        method: 'POST',
+        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        body: file
+      }).then(function (r) {
+        if (r.status === 413) addSys(file.name + ' is too big for the server');
+        else if (r.status === 429) addSys('slow down, that is a lot of files at once');
+        else if (!r.ok) addSys('could not share ' + file.name);
+      }).catch(function () {
+        addSys('could not share ' + file.name);
+      });
+    });
+  }
+
+  ['dragenter', 'dragover'].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      if (e.preventDefault) e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+      showDropHint(true);
+    });
+  });
+
+  document.addEventListener('dragleave', function (e) {
+    // Only when the pointer really left the window, not between child elements
+    if (e && e.relatedTarget) return;
+    showDropHint(false);
+  });
+
+  document.addEventListener('drop', function (e) {
+    if (e.preventDefault) e.preventDefault();
+    showDropHint(false);
+    var list = e && e.dataTransfer && e.dataTransfer.files;
+    uploadFiles(list && list.length ? Array.prototype.slice.call(list) : []);
+  });
 
   // ---- notifications and unread counter ---------------------------------
   // Browsers only expose the Notification API on secure origins, so this
@@ -633,7 +1090,7 @@
     try {
       // One notification per message (unique tag), so nothing gets coalesced away
       n = new Notification('<' + m.name + '>', {
-        body: m.text,
+        body: m.file ? 'shared a file: ' + m.file.name : m.text,
         icon: '/icon.svg',
         tag: 'blah-' + m.id
       });
@@ -740,6 +1197,289 @@
     addSys('signed on: ' + knownNames.join(', '));
   }
 
+  // ---- shared to-do list + calendar --------------------------------------
+  var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var board = { revision: -1, tasks: [], notes: {}, events: [] };
+  var editingId = null;
+  var editDraft = '';
+  var noteDirty = false;
+  var noteLoadedDay = '';
+  var today = new Date();
+  var calMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  var selectedDay = dayKey(today);
+
+  function pad2(value) { return (value < 10 ? '0' : '') + value; }
+
+  function dayKey(date) {
+    return date.getFullYear() + '-' + pad2(date.getMonth() + 1) + '-' + pad2(date.getDate());
+  }
+
+  function prettyDay(key) {
+    var parts = key.split('-');
+    var date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return DAY_NAMES[date.getDay()] + ' ' + date.getDate() + ' ' + MONTHS[date.getMonth()].slice(0, 3);
+  }
+
+  function postBoard(payload, failure) {
+    if (!name) return; // nobody to attribute the change to
+    payload.name = name;
+    fetch('/board', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      if (r.status === 429) addSys('slow down, that was a lot of to-do changes');
+      else if (r.status === 409) addSys('the to-do list is full');
+      else if (!r.ok) addSys(failure || 'that change did not stick');
+      else if (usingPolling) refreshBoard();
+    }).catch(function () { addSys(failure || 'that change did not stick'); });
+  }
+
+  function refreshBoard() {
+    return fetch('/board')
+      .then(function (r) { return r.json(); })
+      .then(function (data) { applyBoard(data); })
+      .catch(function () {});
+  }
+
+  function applyBoard(next) {
+    if (!next || typeof next !== 'object' || next.revision === board.revision) return;
+    board = {
+      revision: next.revision,
+      tasks: Array.isArray(next.tasks) ? next.tasks : [],
+      notes: next.notes && typeof next.notes === 'object' ? next.notes : {},
+      events: Array.isArray(next.events) ? next.events : []
+    };
+    renderTasks();
+    renderCalendar();
+    renderNote();
+  }
+
+  function renderTasks() {
+    var open = 0;
+    for (var i = 0; i < board.tasks.length; i++) if (!board.tasks[i].done) open++;
+    todoCountEl.textContent = board.tasks.length ? '(' + open + '/' + board.tasks.length + ')' : '';
+    todoListEl.innerHTML = '';
+
+    if (!board.tasks.length) {
+      var empty = document.createElement('div');
+      empty.className = 'todo-empty';
+      empty.textContent = 'Nothing on the list yet.';
+      todoListEl.appendChild(empty);
+      return;
+    }
+
+    board.tasks.forEach(function (task) {
+      var row = document.createElement('div');
+      row.className = task.done ? 'task done' : 'task';
+
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.checked = task.done === true;
+      box.title = 'tick off when done';
+      box.addEventListener('change', function () {
+        postBoard({ action: 'toggle', id: task.id, done: box.checked }, 'could not update that task');
+      });
+      row.appendChild(box);
+
+      if (editingId === task.id) {
+        var edit = document.createElement('input');
+        edit.className = 'task-edit';
+        edit.maxLength = 200;
+        edit.value = editDraft;
+        edit.addEventListener('input', function () { editDraft = edit.value; });
+        edit.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); saveEdit(task.id, edit.value); }
+          else if (e.key === 'Escape') { editingId = null; renderTasks(); }
+        });
+        edit.addEventListener('blur', function () {
+          if (editingId !== task.id) return;
+          editingId = null;
+          renderTasks();
+        });
+        row.appendChild(edit);
+
+        var save = document.createElement('button');
+        save.className = 'task-btn';
+        save.type = 'button';
+        save.textContent = '\u2713';
+        save.title = 'save';
+        save.addEventListener('click', function () { saveEdit(task.id, edit.value); });
+        row.appendChild(save);
+
+        todoListEl.appendChild(row);
+        edit.focus();
+        return;
+      }
+
+      var body = document.createElement('div');
+      body.className = 'task-body';
+      var text = document.createElement('div');
+      text.className = 'task-text';
+      text.textContent = task.text;
+      var meta = document.createElement('div');
+      meta.className = 'task-meta';
+      meta.textContent = task.by ? (task.done ? 'done, added by ' : 'added by ') + task.by : '';
+      body.appendChild(text);
+      body.appendChild(meta);
+      row.appendChild(body);
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'task-btn';
+      editBtn.type = 'button';
+      editBtn.textContent = '\u270E';
+      editBtn.title = 'edit this task';
+      editBtn.addEventListener('click', function () {
+        editingId = task.id;
+        editDraft = task.text;
+        renderTasks();
+      });
+      row.appendChild(editBtn);
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'task-btn';
+      delBtn.type = 'button';
+      delBtn.textContent = '\u2715';
+      delBtn.title = 'delete this task';
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Delete "' + task.text + '"?')) return;
+        postBoard({ action: 'delete', id: task.id }, 'could not delete that task');
+      });
+      row.appendChild(delBtn);
+
+      todoListEl.appendChild(row);
+    });
+  }
+
+  function saveEdit(id, value) {
+    var text = String(value || '').trim();
+    editingId = null;
+    renderTasks();
+    if (!text) return;
+    postBoard({ action: 'edit', id: id, text: text }, 'could not save that task');
+  }
+
+  function eventsForDay(day) {
+    return board.events.filter(function (ev) { return dayKey(new Date(ev.at)) === day; });
+  }
+
+  function addDayCell(grid, day, counts) {
+    var key = dayKey(new Date(calMonth.getFullYear(), calMonth.getMonth(), day));
+    var cell = document.createElement('div');
+    var classes = ['cal-cell'];
+    if (key === dayKey(today)) classes.push('today');
+    if (key === selectedDay) classes.push('selected');
+    if (counts[key]) classes.push('has-events');
+    if (board.notes[key]) classes.push('has-note');
+    cell.className = classes.join(' ');
+    cell.textContent = String(day);
+
+    var hints = [];
+    if (counts[key]) hints.push(counts[key] + ' to-do change' + (counts[key] === 1 ? '' : 's'));
+    if (board.notes[key]) hints.push('note');
+    if (key === dayKey(today)) hints.push('today');
+    if (hints.length) cell.title = prettyDay(key) + ': ' + hints.join(', ');
+
+    cell.addEventListener('click', function () {
+      selectedDay = key;
+      renderCalendar();
+      renderNote();
+    });
+    grid.appendChild(cell);
+  }
+
+  function renderCalendar() {
+    var counts = {};
+    board.events.forEach(function (ev) {
+      var key = dayKey(new Date(ev.at));
+      counts[key] = (counts[key] || 0) + 1;
+    });
+
+    calTitleEl.textContent = MONTHS[calMonth.getMonth()] + ' ' + calMonth.getFullYear();
+    calendarEl.innerHTML = '';
+
+    var grid = document.createElement('div');
+    grid.className = 'cal-grid';
+    WEEKDAYS.forEach(function (label) {
+      var head = document.createElement('div');
+      head.className = 'cal-cell head';
+      head.textContent = label;
+      grid.appendChild(head);
+    });
+
+    var firstWeekday = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1).getDay();
+    for (var blank = 0; blank < firstWeekday; blank++) {
+      var pad = document.createElement('div');
+      pad.className = 'cal-cell out';
+      grid.appendChild(pad);
+    }
+
+    var days = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 0).getDate();
+    for (var day = 1; day <= days; day++) addDayCell(grid, day, counts);
+    calendarEl.appendChild(grid);
+  }
+
+  function renderNote() {
+    var note = board.notes[selectedDay];
+    var events = eventsForDay(selectedDay);
+
+    noteDayEl.textContent = prettyDay(selectedDay) + (selectedDay === dayKey(today) ? ' (today)' : '');
+    dayEventCountEl.textContent = events.length ? events.length + ' change' + (events.length === 1 ? '' : 's') : '';
+
+    dayEventsEl.innerHTML = '';
+    if (!events.length) {
+      dayEventsEl.textContent = 'no to-do changes this day';
+    } else {
+      events.forEach(function (ev) {
+        var line = document.createElement('div');
+        line.textContent = ev.type + ': ' + ev.text + (ev.by ? ' (' + ev.by + ')' : '');
+        dayEventsEl.appendChild(line);
+      });
+    }
+
+    // Don't stamp on what someone is part-way through typing
+    if (selectedDay !== noteLoadedDay || !noteDirty) {
+      noteLoadedDay = selectedDay;
+      noteDirty = false;
+      noteInput.value = note ? note.text : '';
+    }
+  }
+
+  todoForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = todoInput.value.trim();
+    if (!text || !name) return;
+    todoInput.value = '';
+    postBoard({ action: 'add', text: text }, 'could not add that task');
+  });
+
+  noteInput.addEventListener('input', function () { noteDirty = true; });
+
+  document.getElementById('noteSave').addEventListener('click', function () {
+    noteDirty = false;
+    postBoard({ action: 'note', day: selectedDay, text: noteInput.value }, 'could not save that note');
+  });
+
+  document.getElementById('noteClear').addEventListener('click', function () {
+    noteDirty = false;
+    noteInput.value = '';
+    postBoard({ action: 'note', day: selectedDay, text: '' }, 'could not clear that note');
+  });
+
+  document.getElementById('calPrev').addEventListener('click', function () {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1);
+    renderCalendar();
+  });
+
+  document.getElementById('calNext').addEventListener('click', function () {
+    calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1);
+    renderCalendar();
+  });
+
+  refreshBoard();
+
   // ---- menus -------------------------------------------------------------
   var MENUS = ['file', 'view', 'insert', 'people'];
 
@@ -764,7 +1504,7 @@
   });
 
   function renderMenuState() {
-    document.getElementById('mi-buddies').textContent = (prefBuddies() ? '\u2713 ' : '\u00a0\u00a0\u00a0') + 'Show buddy list';
+    document.getElementById('mi-buddies').textContent = (prefRail() ? '\u2713 ' : '\u00a0\u00a0\u00a0') + 'Show side panel';
     document.getElementById('mi-notify').textContent = (notificationsOn() ? '\u2713 ' : '\u00a0\u00a0\u00a0') + 'Notifications';
   }
 
@@ -787,8 +1527,13 @@
       fontSelect.value = DEFAULT_FONT;
       applyPrefs();
     },
+    'mi-reset-sizes': function () {
+      localStorage.removeItem('blah-rail-width');
+      localStorage.removeItem('blah-calendar-height');
+      applySizes();
+    },
     'mi-buddies': function () {
-      localStorage.setItem('blah-buddies', prefBuddies() ? 'off' : 'on');
+      localStorage.setItem('blah-rail', prefRail() ? 'off' : 'on');
       applyPrefs();
     },
     'mi-notify': toggleNotifications,
@@ -816,6 +1561,28 @@
 
   document.getElementById('task').addEventListener('click', function () {
     input.focus();
+  });
+
+  // ---- title bar buttons -------------------------------------------------
+  document.getElementById('tbMin').addEventListener('click', function () {
+    setMaximized(false);
+  });
+
+  tbMaxBtn.addEventListener('click', function () {
+    setMaximized(!prefMaximized());
+  });
+
+  document.getElementById('tbClose').addEventListener('click', function () {
+    signOff();
+    addSys('signed off');
+  });
+
+  // Double-clicking the title bar is the old Windows shortcut for maximise
+  titlebarEl.addEventListener('dblclick', function (e) {
+    // The buttons look after their own clicks
+    var target = e && e.target;
+    if (target && typeof target.id === 'string' && target.id.indexOf('tb') === 0) return;
+    setMaximized(!prefMaximized());
   });
 
   // ---- toolbar -----------------------------------------------------------
@@ -893,10 +1660,12 @@
           }
           var replay = resyncing;
           resyncing = false;
+          if (typeof data.maxFileBytes === 'number') MAX_FILE_BYTES = data.maxFileBytes;
           if (replay) showWelcome();
           data.messages.forEach(function (m) { addMsg(m, !replay); });
           if (nearBottom) log.scrollTop = log.scrollHeight;
           setOnline(data.online, data.names);
+          if (typeof data.boardRevision === 'number' && data.boardRevision !== board.revision) refreshBoard();
           setStatus('online', true);
         })
         .catch(function () { setStatus('reconnecting\u2026', false); });
@@ -917,6 +1686,7 @@
     es.onmessage = function (e) {
       var data = JSON.parse(e.data);
       if (data.type === 'history') {
+        if (typeof data.maxFileBytes === 'number') MAX_FILE_BYTES = data.maxFileBytes;
         // Fresh stream: rebuild from scratch so reconnects self-heal. Messages
         // that showed up while we were disconnected count as new, but only if
         // this window already had a history loaded (so opening BLAH in a
@@ -942,6 +1712,8 @@
         showWelcome();
       } else if (data.type === 'online') {
         setOnline(data.count, data.names);
+      } else if (data.type === 'board') {
+        applyBoard(data.board);
       }
     };
   }
@@ -970,6 +1742,9 @@
   setInterval(tickClock, 20000);
 
   applyPrefs();
+
+  // Keep the saved panel sizes sane when the window (or maximise state) changes
+  window.addEventListener('resize', function () { applySizes(); });
 })();
 </script>
 </body>
