@@ -1001,9 +1001,11 @@
         return;
       }
       addSys('sending ' + file.name + ' (' + formatSize(file.size) + ')');
+      // The custom header is how the server tells our own page apart from a
+      // form on some other site: forms can't set one
       fetch('/upload?u=' + encodeURIComponent(name) + '&n=' + encodeURIComponent(file.name), {
         method: 'POST',
-        headers: { 'Content-Type': file.type || 'application/octet-stream' },
+        headers: { 'Content-Type': file.type || 'application/octet-stream', 'X-Blah-Upload': '1' },
         body: file
       }).then(function (r) {
         if (r.status === 413) addSys(file.name + ' is too big for the server');
@@ -1642,7 +1644,10 @@
     setStatus('online', true);
     addSys('live updates limited, refreshing every 2s');
     var resyncing = true; // the first fetch loads the whole room, so nothing is new
+    var inFlight = false; // one poll at a time, so a slow server doesn't get a pile-up
     setInterval(function () {
+      if (inFlight) return;
+      inFlight = true;
       fetch('/messages?since=' + (resyncing ? 0 : lastId) + '&u=' + encodeURIComponent(name) + '&w=' + windowId)
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -1668,7 +1673,8 @@
           if (typeof data.boardRevision === 'number' && data.boardRevision !== board.revision) refreshBoard();
           setStatus('online', true);
         })
-        .catch(function () { setStatus('reconnecting\u2026', false); });
+        .catch(function () { setStatus('reconnecting\u2026', false); })
+        .then(function () { inFlight = false; });
     }, 2000);
   }
 

@@ -162,14 +162,26 @@ You can drop several files at once, and the sending line appears as you go.
   you get the file on your machine and open it there, which is what the chip is
   for.
 - Sharing is rate limited to 10 files per 10 seconds per name, alongside the
-  message and to-do limits.
+  message and to-do limits, and at most four uploads are in flight at once.
+  Files stream straight to disk as they arrive, so a big one never sits in the
+  Umbrel's memory.
 
 ## Notes
 
 - **No login, by design.** `PROXY_AUTH_ADD: "false"` in
-  `blah/docker-compose.yml` turns off Umbrel's login wall so anyone on your
-  LAN can open the chat. If you'd rather have Umbrel's login protection,
-  delete that line and reinstall.
+  `blah/docker-compose.yml` makes "no Umbrel login wall" the default, so anyone
+  on your LAN can open the chat. If you'd rather have Umbrel's login
+  protection, flip it in BLAH's settings on the dashboard; umbrelOS keeps that
+  choice across updates, no reinstall needed.
+- **Other websites can't poke the room.** Requests a browser flags as coming
+  from another site are refused, the JSON endpoints only accept JSON, and
+  uploads need a header a web form can't send. Scripts and `curl` on your LAN
+  are unaffected: send `Content-Type: application/json` (and
+  `X-Blah-Upload: 1` for uploads).
+- The container runs as the unprivileged `node` user (uid 1000), with every
+  Linux capability dropped. A small `hooks/pre-start` script hands any data
+  written by older, root-running versions over to that user on the first start
+  after updating.
 - "online" counts open chat windows, not people: each tab, phone, or laptop
   with the chat open counts once, even when two of them pick the same name.
 - Flood control is deliberately gentle: a name can send 15 messages per 10
@@ -178,7 +190,12 @@ You can drop several files at once, and the sending line appears as you go.
   as a speed bump rather than a ban.
 - To update after changing the code: push to GitHub, bump `version` in
   `blah/umbrel-app.yml`, and the dashboard will offer an Update button
-  (umbrelOS re-checks app stores every few minutes).
+  (umbrelOS re-checks app stores every few minutes). Because the image is
+  built on the Umbrel rather than pulled by name, each update leaves the
+  previous build behind as a dangling image; `docker image prune -f` over SSH
+  reclaims the space. Publishing a multi-arch image to GHCR and pointing
+  `image:` at it is the tidier long-term setup, and an official-store
+  submission would also want screenshots in `gallery`.
 - The dashboard icon comes from `blah/icon.svg` over its raw GitHub URL, so it
   only appears once the repo is public. Until then the tile shows a
   placeholder and the app still works.

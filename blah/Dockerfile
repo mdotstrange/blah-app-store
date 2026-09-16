@@ -1,4 +1,4 @@
-FROM node:24-alpine
+FROM node:24.12-alpine
 
 # server.js only uses Node's standard library, so there is nothing to install.
 WORKDIR /app
@@ -6,8 +6,12 @@ COPY server.js .
 COPY icon.svg .
 COPY public ./public
 
+# Runs as the unprivileged node user (uid 1000, matching docker-compose.yml).
+# /data is created here so a plain `docker run` with a named volume gets a
+# mount point the node user can write to.
+RUN mkdir -p /data && chown node:node /data
+USER node
+
 EXPOSE 3000
 
-# Runs as root (same as docker-compose.yml) so the bind-mounted data dir is
-# always writable, even when Docker creates it for us.
 CMD ["node", "server.js"]

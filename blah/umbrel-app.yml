@@ -2,7 +2,7 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.10.0"
+version: "1.11.0"
 tagline: A dead-simple local chat room
 icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
@@ -20,11 +20,11 @@ description: >-
   restarts. Anyone in the room can wipe the history for everyone with
   the clear button.
 releaseNotes: >-
-  Share files in the chat: drag a file onto the window and everyone sees it as a
-  named chip with a file-type icon and its size. Clicking a chip downloads the
-  file under its original name. Files live on your Umbrel (data/files), survive
-  restarts, and are cleaned up when the history is cleared or the chat rolls
-  over.
+  Hardening release. The server no longer runs as root inside its container,
+  shuts the door on other websites posting to or clearing your room behind your
+  back, and shrugs off a couple of malformed requests that could previously
+  restart it. Shared files now stream straight to disk instead of sitting in
+  memory while they upload. No visible changes to the chat itself.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []

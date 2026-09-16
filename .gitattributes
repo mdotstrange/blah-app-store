@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# cmd.exe misreads goto/call labels in batch files that have LF-only endings
+*.bat text eol=crlf

@@ -1,2 +1,6 @@
 id: "blah"
 name: "BLAH"
+# umbreld lists an app when its id starts with the store id, so the app is
+# simply "blah" too. The usual convention is "<store>-<app>" (e.g. blah-chat),
+# but renaming now would change the container name and force a reinstall for
+# everyone who already has it, so the single id stays.

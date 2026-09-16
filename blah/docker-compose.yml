@@ -4,7 +4,9 @@ services:
       # The format here is: <app-id>_<docker-service-name>_1
       APP_HOST: blah_server_1
       APP_PORT: 3000
-      # No Umbrel login wall: anyone on the local network can open the chat
+      # Default: no Umbrel login wall, anyone on the local network can open the
+      # chat. Users can flip this per app in the app's settings on the dashboard
+      # (umbreld treats this value only as the default).
       PROXY_AUTH_ADD: "false"
 
   server:
@@ -18,14 +20,24 @@ services:
     # in umbreld's fragments folder and fail.
     #
     # Intentionally no `image:` key - there is no published image to pull, and
-    # umbreld's pull step skips services that don't name one.
+    # umbreld's pull step skips services that don't name one. The flip side is
+    # that umbreld has no image name to remove after an update, so each rebuild
+    # leaves the previous build behind as a dangling <none> image. Every so
+    # often `docker image prune -f` over SSH reclaims that space.
     build: ${APP_DATA_DIR}
     init: true
     restart: on-failure
-    # Runs as root so it can write the mounted data dir, even when Docker is
-    # what created ${APP_DATA_DIR}/data
+    # Runs as the unprivileged node user (uid 1000). umbreld chowns the app
+    # folder to 1000:1000 when it clones the store, so the data dir below is
+    # writable without root; hooks/pre-start fixes up data written by older
+    # versions that still ran as root.
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       DATA_DIR: /data
     volumes:
-      # Chat history lives here on the Umbrel (survives restarts/updates)
+      # Chat history and shared files live here on the Umbrel (survive restarts/updates)
       - ${APP_DATA_DIR}/data:/data

@@ -24,6 +24,7 @@ const BOARD_BURST = 30; // to-do edits one name may make per window
 const MAX_FILE_BYTES = Math.max(1, Number(process.env.BLAH_MAX_FILE_MB) || 50) * 1024 * 1024;
 const MAX_FILE_NAME = 120;
 const UPLOAD_BURST = 10; // files one name may share per window
+const MAX_CONCURRENT_UPLOADS = 4; // in flight at once, across every name
 const FILE_ID_PATTERN = /^[a-f0-9]{18}(\.[a-z0-9]{1,10})?$/;
 const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -36,6 +37,7 @@ const pollers = new Map(); // window id -> {name, seen}
 const sendTimes = new Map(); // name -> recent send timestamps
 const boardTimes = new Map(); // name -> recent to-do write timestamps
 const uploadTimes = new Map(); // name -> recent upload timestamps
+let activeUploads = 0;
 
 // The shared to-do list and the per-day calendar notes.
 let taskSeq = 0;
@@ -60,12 +62,23 @@ function readIcon() {
   }
 }
 
-let indexHtml = fs.readFileSync(INDEX_PATH);
+// Lets the browser revalidate instead of reusing a stale page after an update.
+// Hashed once per load, not once per request.
+function etagFor(buffer) {
+  return `"${crypto.createHash('sha1').update(buffer).digest('hex').slice(0, 16)}"`;
+}
+
+function loadIndex() {
+  const page = fs.readFileSync(INDEX_PATH);
+  return { page, etag: etagFor(page) };
+}
+
+let index = loadIndex();
 let iconSvg = readIcon();
 
-function currentIndexHtml() {
-  if (DEV_RELOAD) indexHtml = fs.readFileSync(INDEX_PATH);
-  return indexHtml;
+function currentIndex() {
+  if (DEV_RELOAD) index = loadIndex();
+  return index;
 }
 
 // Used for the favicon and the notification popup icon. Optional: if the file
@@ -73,11 +86,6 @@ function currentIndexHtml() {
 function currentIcon() {
   if (DEV_RELOAD) iconSvg = readIcon();
   return iconSvg;
-}
-
-// Lets the browser revalidate instead of reusing a stale page after an update
-function etagFor(buffer) {
-  return `"${crypto.createHash('sha1').update(buffer).digest('hex').slice(0, 16)}"`;
 }
 
 // History persists to HISTORY_FILE so it survives app restarts. If the
@@ -126,7 +134,8 @@ if (persistenceReady && fs.existsSync(HISTORY_FILE)) {
 }
 
 // Drop any file on disk that no surviving message points at, so the volume
-// does not fill up with attachments whose chat message has been cleared.
+// does not fill up with attachments whose chat message has been cleared. This
+// also sweeps up the .part file of any upload that a restart cut short.
 if (persistenceReady) {
   try {
     const wanted = new Set(messages.filter(m => m.file).map(m => m.file.id));
@@ -142,6 +151,9 @@ if (persistenceReady) {
 if (persistenceReady && fs.existsSync(BOARD_FILE)) {
   try {
     const saved = JSON.parse(fs.readFileSync(BOARD_FILE, 'utf8'));
+    // The revision is kept on disk so a client that reconnects after a restart
+    // can't mistake a rebuilt list for the one it already has.
+    if (Number.isInteger(saved.revision) && saved.revision > 0) boardRevision = saved.revision;
     if (Array.isArray(saved.tasks)) {
       for (const t of saved.tasks.slice(-MAX_TASKS)) {
         if (t && Number.isInteger(t.id) && typeof t.text === 'string') {
@@ -200,7 +212,7 @@ function saveHistory() {
 function saveBoard() {
   if (!persistenceReady) return;
   try {
-    fs.writeFileSync(BOARD_FILE + '.tmp', JSON.stringify({ tasks, notes, events: boardEvents }));
+    fs.writeFileSync(BOARD_FILE + '.tmp', JSON.stringify({ revision: boardRevision, tasks, notes, events: boardEvents }));
     fs.renameSync(BOARD_FILE + '.tmp', BOARD_FILE);
   } catch (err) {
     console.warn(`BLAH: failed to save the to-do list (${err.message})`);
@@ -334,13 +346,72 @@ function pruneTracking() {
   }
 }
 
+// ---- request plumbing --------------------------------------------------
+// Any handler bug answers 500 for that one request instead of taking the whole
+// room down with it (an uncaught throw in an http handler exits the process).
+function guarded(req, res, fn) {
+  try {
+    fn();
+  } catch (err) {
+    console.warn(`BLAH: ${req.method} ${req.url} failed (${err.message})`);
+    try {
+      if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'text/plain' });
+      res.end('server error');
+    } catch (ignored) {
+      // the socket is already gone
+    }
+  }
+}
+
+function refuse(res, code, message) {
+  res.writeHead(code, { 'Content-Type': 'text/plain' });
+  res.end(message);
+}
+
+// For a request whose body we don't want: answer, then drop the connection once
+// the answer is on the wire, rather than draining gigabytes into the void.
+function refuseAndDrop(req, res, code, message) {
+  res.writeHead(code, { 'Content-Type': 'text/plain', Connection: 'close' });
+  res.end(message, () => req.destroy());
+}
+
+// ---- cross-site request forgery -----------------------------------------
+// There is no login, so the only thing between a random web page and "post as
+// anyone / wipe the room" is the browser saying where a request came from.
+// Modern browsers label every request with Sec-Fetch-Site: BLAH's own page is
+// same-origin, a form or script on another site is cross-site and is refused.
+// On top of that the JSON endpoints insist on a JSON body (an HTML form can
+// only send urlencoded, multipart or text/plain, which is how the classic
+// text/plain trick smuggles JSON in) and the upload endpoint insists on a
+// custom header, which a form can't set and a cross-site fetch can't add
+// without a CORS preflight this server never approves. Plain curl on the LAN
+// sends none of the browser headers and keeps working.
+function rejectForgery(req, res, { header, drop } = {}) {
+  const site = String(req.headers['sec-fetch-site'] || '').toLowerCase();
+  const answer = (code, message) => (drop ? refuseAndDrop(req, res, code, message) : refuse(res, code, message));
+  if (site && site !== 'same-origin' && site !== 'none') {
+    answer(403, 'cross-site request refused');
+    return true;
+  }
+  if (header) {
+    if (!req.headers[header]) {
+      answer(403, `${header} header required`);
+      return true;
+    }
+  } else if (!String(req.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+    answer(415, 'send JSON');
+    return true;
+  }
+  return false;
+}
+
 // Keep SSE connections alive through proxies
 setInterval(() => {
   pruneTracking();
   for (const res of sseClients.keys()) safeWrite(res, ': hb\n\n');
 }, 25000);
 
-const server = http.createServer((req, res) => {
+function handleRequest(req, res) {
   let url;
   try {
     url = new URL(req.url, 'http://localhost');
@@ -393,12 +464,13 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === '/board' && req.method === 'POST') {
+    if (rejectForgery(req, res)) return;
     let body = '';
     req.on('data', chunk => {
       body += chunk;
       if (body.length > 8192) req.destroy();
     });
-    req.on('end', () => {
+    req.on('end', () => guarded(req, res, () => {
       const fail = (code, message) => {
         res.writeHead(code, { 'Content-Type': 'text/plain' });
         res.end(message);
@@ -423,18 +495,28 @@ const server = http.createServer((req, res) => {
         fail(400, 'name required');
         return;
       }
+      // Validate before the request counts against the flood budget, so a
+      // mistyped action or a stale task id doesn't eat into it
+      const needsTask = action === 'edit' || action === 'toggle' || action === 'delete';
+      const task = needsTask ? tasks.find(t => t.id === Number(payload.id)) : null;
+      if (!['add', 'edit', 'toggle', 'delete', 'note'].includes(action)) {
+        fail(400, 'unknown action');
+        return;
+      }
+      if (needsTask && !task) {
+        fail(404, 'no such task');
+        return;
+      }
+      if ((action === 'add' || action === 'edit') && !text) {
+        fail(400, 'text required');
+        return;
+      }
       if (tooFast(boardTimes, name, BOARD_BURST)) {
         fail(429, 'slow down');
         return;
       }
 
-      const task = action === 'add' ? null : tasks.find(t => t.id === Number(payload.id));
-
       if (action === 'add') {
-        if (!text) {
-          fail(400, 'text required');
-          return;
-        }
         if (tasks.length >= MAX_TASKS) {
           fail(409, 'the to-do list is full');
           return;
@@ -444,32 +526,16 @@ const server = http.createServer((req, res) => {
         tasks.push(created);
         logBoardEvent('created', created, name);
       } else if (action === 'edit') {
-        if (!task) {
-          fail(404, 'no such task');
-          return;
-        }
-        if (!text) {
-          fail(400, 'text required');
-          return;
-        }
         task.text = text;
         task.updatedBy = name;
         task.updatedAt = Date.now();
         logBoardEvent('edited', task, name);
       } else if (action === 'toggle') {
-        if (!task) {
-          fail(404, 'no such task');
-          return;
-        }
         task.done = payload.done === true;
         task.updatedBy = name;
         task.updatedAt = Date.now();
         logBoardEvent(task.done ? 'done' : 'reopened', task, name);
       } else if (action === 'delete') {
-        if (!task) {
-          fail(404, 'no such task');
-          return;
-        }
         tasks.splice(tasks.indexOf(task), 1);
         // Drop the deleted task's history so the calendar only shows live work
         for (let i = boardEvents.length - 1; i >= 0; i--) {
@@ -485,23 +551,17 @@ const server = http.createServer((req, res) => {
         const noteText = String(payload.text || '').trim().slice(0, MAX_NOTE_TEXT);
         if (!noteText) delete notes[day];
         else notes[day] = { text: noteText, by: name, at: Date.now() };
-      } else {
-        fail(400, 'unknown action');
-        return;
       }
 
       boardChanged();
       res.writeHead(204);
       res.end();
-    });
+    }));
     return;
   }
 
   if (url.pathname === '/upload' && req.method === 'POST') {
-    const fail = (code, message) => {
-      res.writeHead(code, { 'Content-Type': 'text/plain' });
-      res.end(message);
-    };
+    if (rejectForgery(req, res, { header: 'x-blah-upload', drop: true })) return;
 
     const name = String(url.searchParams.get('u') || '').trim().slice(0, MAX_NAME);
     const fileName = (String(url.searchParams.get('n') || '').trim() || 'file').slice(0, MAX_FILE_NAME);
@@ -509,46 +569,73 @@ const server = http.createServer((req, res) => {
     const declared = Number(req.headers['content-length']) || 0;
 
     if (!name) {
-      fail(400, 'name required');
-      return;
-    }
-    if (tooFast(uploadTimes, name, UPLOAD_BURST)) {
-      fail(429, 'slow down');
+      refuseAndDrop(req, res, 400, 'name required');
       return;
     }
     if (declared > MAX_FILE_BYTES) {
-      fail(413, 'file too big');
-      req.resume(); // drain what is already on the wire
+      refuseAndDrop(req, res, 413, 'file too big');
+      return;
+    }
+    if (activeUploads >= MAX_CONCURRENT_UPLOADS || tooFast(uploadTimes, name, UPLOAD_BURST)) {
+      refuseAndDrop(req, res, 429, 'slow down');
+      return;
+    }
+    if (!persistenceReady) {
+      refuseAndDrop(req, res, 500, 'could not store the file');
       return;
     }
 
-    const chunks = [];
+    // Streamed straight to disk as <id>.part, so a big file never sits in
+    // memory, then renamed into place once the last byte has landed. A cut-off
+    // upload (too big, client gone, disk error) throws the .part away.
+    const fileId = crypto.randomBytes(9).toString('hex') + safeExtension(fileName);
+    const finalPath = path.join(FILES_DIR, fileId);
+    const partPath = finalPath + '.part';
+    const out = fs.createWriteStream(partPath, { flags: 'wx' });
     let received = 0;
-    let tooBig = false;
-    req.on('data', chunk => {
-      if (tooBig) return;
-      received += chunk.length;
-      if (received > MAX_FILE_BYTES) {
-        tooBig = true;
-        chunks.length = 0;
-        fail(413, 'file too big');
-        req.resume();
-        return;
-      }
-      chunks.push(chunk);
+    let settled = false;
+    let abandoned = false;
+    activeUploads++;
+
+    const abandon = (code, message) => {
+      if (settled) return;
+      settled = true;
+      abandoned = true;
+      activeUploads--;
+      req.unpipe(out);
+      out.destroy();
+      if (code) refuseAndDrop(req, res, code, message);
+    };
+
+    out.on('close', () => {
+      if (abandoned) fs.unlink(partPath, () => {});
     });
-    req.on('end', () => {
-      if (tooBig) return;
+    out.on('error', err => {
+      if (!settled) console.warn(`BLAH: could not store ${fileId} (${err.message})`);
+      abandon(500, 'could not store the file');
+    });
+    req.on('error', () => abandon(0));
+    req.on('close', () => {
+      if (!req.complete) abandon(0); // the client went away mid-upload
+    });
+    req.on('data', chunk => {
+      received += chunk.length;
+      if (received > MAX_FILE_BYTES) abandon(413, 'file too big');
+    });
+    out.on('finish', () => {
+      if (settled) return;
       if (!received) {
-        fail(400, 'empty file');
+        abandon(400, 'empty file');
         return;
       }
-      const fileId = crypto.randomBytes(9).toString('hex') + safeExtension(fileName);
+      settled = true;
+      activeUploads--;
       try {
-        fs.writeFileSync(path.join(FILES_DIR, fileId), Buffer.concat(chunks));
+        fs.renameSync(partPath, finalPath);
       } catch (err) {
         console.warn(`BLAH: could not store ${fileId} (${err.message})`);
-        fail(500, 'could not store the file');
+        fs.unlink(partPath, () => {});
+        refuse(res, 500, 'could not store the file');
         return;
       }
       const message = {
@@ -565,11 +652,14 @@ const server = http.createServer((req, res) => {
       res.writeHead(204);
       res.end();
     });
+    req.pipe(out);
     return;
   }
 
   if (url.pathname.startsWith('/files/') && req.method === 'GET') {
-    const fileId = decodeURIComponent(url.pathname.slice('/files/'.length));
+    // No decodeURIComponent here: the id pattern only admits [a-f0-9.], which
+    // never need escaping, and decoding a stray % would throw.
+    const fileId = url.pathname.slice('/files/'.length);
     const file = FILE_ID_PATTERN.test(fileId) ? findFile(fileId) : null;
     if (!file) {
       res.writeHead(404, { 'Content-Type': 'text/plain' });
@@ -593,17 +683,26 @@ const server = http.createServer((req, res) => {
       'X-Content-Type-Options': 'nosniff',
       'Cache-Control': 'private, max-age=0, no-store',
     });
-    fs.createReadStream(filePath).pipe(res);
+    // The file can vanish between the stat and the open (a /clear racing a
+    // download), and an unhandled stream error would exit the process.
+    const stream = fs.createReadStream(filePath);
+    stream.on('error', err => {
+      console.warn(`BLAH: could not read ${file.id} (${err.message})`);
+      res.destroy();
+    });
+    res.on('close', () => stream.destroy());
+    stream.pipe(res);
     return;
   }
 
   if (url.pathname === '/clear' && req.method === 'POST') {
+    if (rejectForgery(req, res)) return;
     let body = '';
     req.on('data', chunk => {
       body += chunk;
       if (body.length > 2048) req.destroy();
     });
-    req.on('end', () => {
+    req.on('end', () => guarded(req, res, () => {
       let name = '';
       try {
         name = String(JSON.parse(body).name || '').trim().slice(0, MAX_NAME);
@@ -624,17 +723,18 @@ const server = http.createServer((req, res) => {
       broadcast({ type: 'cleared', name: name || 'someone', generation });
       res.writeHead(204);
       res.end();
-    });
+    }));
     return;
   }
 
   if (url.pathname === '/send' && req.method === 'POST') {
+    if (rejectForgery(req, res)) return;
     let body = '';
     req.on('data', chunk => {
       body += chunk;
       if (body.length > 8192) req.destroy();
     });
-    req.on('end', () => {
+    req.on('end', () => guarded(req, res, () => {
       let name, text;
       try {
         ({ name, text } = JSON.parse(body));
@@ -662,13 +762,12 @@ const server = http.createServer((req, res) => {
       broadcast({ type: 'message', message });
       res.writeHead(204);
       res.end();
-    });
+    }));
     return;
   }
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    const page = currentIndexHtml();
-    const etag = etagFor(page);
+    const { page, etag } = currentIndex();
     if (req.headers['if-none-match'] === etag) {
       res.writeHead(304, { 'Cache-Control': 'no-cache', ETag: etag });
       res.end();
@@ -700,7 +799,9 @@ const server = http.createServer((req, res) => {
 
   res.writeHead(404, { 'Content-Type': 'text/plain' });
   res.end('not found');
-});
+}
+
+const server = http.createServer((req, res) => guarded(req, res, () => handleRequest(req, res)));
 
 server.listen(PORT, () => {
   console.log(`BLAH chat listening on port ${PORT}`);
