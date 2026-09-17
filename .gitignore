@@ -1,3 +1,5 @@
 # Written by local test runs (chat history, to-do list, day notes, shared files)
 blah/data/*
 !blah/data/.gitkeep
+dev.bat
+dev-reset.bat

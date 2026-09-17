@@ -15,9 +15,9 @@
     --desktop: #007b7b;
     --title-a: #000080;
     --title-b: #1084d0;
-    --buddy-bg: #ededed;
+    --memo-bg: #fffce8;
     --msg-size: 18px;
-    --ui-size: 12px; /* side panel text: to-do list, calendar, buddy list */
+    --ui-size: 12px; /* side panel text: notes, to-do list, calendar */
     --msg-font: Georgia, "Times New Roman", serif;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -153,7 +153,7 @@
   .status-area { margin-left: auto; padding: 0 6px; font-size: 11px; color: var(--dark); }
   #status.ok { color: #006400; font-weight: bold; }
 
-  /* ---------- message pane + buddy list ---------- */
+  /* ---------- message pane + side panel ---------- */
   .client { flex: 1; min-height: 0; display: flex; gap: 4px; padding: 4px; }
   .pane { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
   #log {
@@ -175,6 +175,10 @@
   .msg .name { font-weight: bold; }
   .msg.mine { background: #f2f5ff; }
   .sys { color: #6b6b6b; font-style: italic; }
+
+  /* urls typed in a message or a note: text stays exactly as written */
+  .link { color: #0000cc; text-decoration: underline; }
+  .link:hover { color: #cc0000; }
 
   /* ---------- shared files ---------- */
   .file {
@@ -278,7 +282,7 @@
   }
   #send { width: 76px; font-size: 12px; }
 
-  /* ---------- right hand rail: buddies, to-do list, calendar ---------- */
+  /* ---------- right hand rail: notes, to-do list, calendar ---------- */
   .rail {
     flex: none;
     width: 252px;
@@ -289,15 +293,18 @@
     overflow: hidden;
   }
 
-  /* drag handles: side panel width, and the to-do/calendar split */
+  /* drag handles: side panel width, the notes/to-do split, the to-do/calendar split */
   .split { flex: none; background: var(--face); touch-action: none; }
   .split-v { width: 5px; cursor: col-resize; }
   .split-h { height: 5px; cursor: row-resize; }
   .split:hover, .split.dragging { background: #9c9c9c; }
+  /* Notes and calendar stay at the height they were dragged to, the to-do
+     list takes whatever is left over in between, and any of them may give a
+     little back when the window gets too short for all three. */
   .panel { display: flex; flex-direction: column; min-height: 0; gap: 3px; }
-  .panel-buddies { flex: 0 1 auto; max-height: 132px; }
+  .panel-notes { flex: 0 1 auto; height: 170px; min-height: 80px; }
   .panel-todo { flex: 1 1 auto; min-height: 108px; }
-  .panel-calendar { flex: 0 0 auto; min-height: 150px; }
+  .panel-calendar { flex: 0 1 auto; min-height: 150px; }
   .panel-header {
     flex: none;
     display: flex;
@@ -311,7 +318,7 @@
     font-weight: bold;
     font-size: var(--ui-size);
   }
-  #online { font-weight: normal; color: var(--dark); }
+  .panel-header .count { font-weight: normal; color: var(--dark); }
   .list {
     flex: 1;
     min-height: 0;
@@ -320,25 +327,24 @@
     border: 2px solid;
     border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
   }
-  .buddy-list { background: var(--buddy-bg); }
-  .buddy { display: flex; align-items: center; gap: 6px; padding: 3px 6px; font-size: calc(var(--ui-size) + 2px); }
-  .buddy .dot { flex: none; width: calc(var(--ui-size) * 0.85); height: calc(var(--ui-size) * 0.85); border: 1px solid rgba(0, 0, 0, 0.35); }
-  .buddy.dim { color: var(--shadow); font-size: var(--ui-size); padding: 6px; }
+  /* notes get a faint yellow so the pane reads as scribbled-on paper */
+  .memo-list { background: var(--memo-bg); }
 
-  .todo-list { padding: 2px; }
-  .task { display: flex; align-items: flex-start; gap: 4px; padding: 2px 3px; font-size: var(--ui-size); line-height: 1.3; }
-  .task + .task { border-top: 1px dotted #d4d4d4; }
+  .todo-list, .memo-list { padding: 2px; }
+  /* notes and to-dos are both one line of text with small buttons on the right */
+  .task, .memo-item { display: flex; align-items: flex-start; gap: 4px; padding: 2px 3px; font-size: var(--ui-size); line-height: 1.3; }
+  .task + .task, .memo-item + .memo-item { border-top: 1px dotted #d4d4d4; }
   .task input[type="checkbox"] {
     flex: none;
     width: var(--ui-size);
     height: var(--ui-size);
     margin-top: calc(var(--ui-size) * 0.15);
   }
-  .task-body { flex: 1; min-width: 0; }
-  .task-text { overflow-wrap: anywhere; }
+  .task-body, .memo-body { flex: 1; min-width: 0; }
+  .task-text, .memo-text { overflow-wrap: anywhere; }
   .task.done .task-text { text-decoration: line-through; color: #8a8a8a; }
-  .task-meta { color: #8a8a8a; font-size: calc(var(--ui-size) - 2px); }
-  .task-edit {
+  .task-meta, .memo-meta { color: #8a8a8a; font-size: calc(var(--ui-size) - 2px); }
+  .task-edit, .memo-edit {
     flex: 1;
     min-width: 0;
     font: inherit;
@@ -347,6 +353,7 @@
     border: 2px solid;
     border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
   }
+  /* the little square Win95 button used in the to-do and notes rows */
   .task-btn {
     flex: none;
     width: calc(var(--ui-size) * 1.5);
@@ -361,9 +368,9 @@
     cursor: pointer;
   }
   .task-btn:active { transform: translate(1px, 1px); }
-  .todo-empty { padding: 4px; color: var(--shadow); font-size: calc(var(--ui-size) - 1px); }
-  .todo-add { flex: none; display: flex; gap: 3px; }
-  .todo-add input {
+  .todo-empty, .memo-empty { padding: 4px; color: var(--shadow); font-size: calc(var(--ui-size) - 1px); }
+  .todo-add, .memo-add { flex: none; display: flex; gap: 3px; }
+  .todo-add input, .memo-add input {
     flex: 1;
     min-width: 0;
     font: inherit;
@@ -372,7 +379,7 @@
     border: 2px solid;
     border-color: var(--shadow) var(--hilite) var(--hilite) var(--shadow);
   }
-  .todo-add .btn { font-size: calc(var(--ui-size) - 1px); padding: 1px 7px; }
+  .todo-add .btn, .memo-add .btn { font-size: calc(var(--ui-size) - 1px); padding: 1px 7px; }
 
   .cal-title { flex: 1; text-align: center; font-weight: bold; }
   .cal-nav {
@@ -582,13 +589,18 @@
         </div>
         <div class="split split-v" id="splitRail" title="drag to resize the side panel (double-click to reset)"></div>
         <div class="rail" id="rail">
-          <div class="panel panel-buddies">
-            <div class="panel-header"><span>Online</span><span id="online"></span></div>
-            <div class="list buddy-list" id="buddyList"></div>
+          <div class="panel panel-notes" id="panelNotes">
+            <div class="panel-header"><span>Notes</span><span class="count" id="memoCount"></span></div>
+            <div class="list memo-list" id="memoList"></div>
+            <form class="memo-add" id="memoForm">
+              <input id="memoInput" maxlength="200" autocomplete="off" placeholder="Add a note">
+              <button class="btn" type="submit">Add</button>
+            </form>
           </div>
 
-          <div class="panel panel-todo">
-            <div class="panel-header"><span>To Do</span><span id="todoCount"></span></div>
+          <div class="split split-h" id="splitNotes" title="drag to resize the notes (double-click to reset)"></div>
+          <div class="panel panel-todo" id="panelTodo">
+            <div class="panel-header"><span>To Do</span><span class="count" id="todoCount"></span></div>
             <div class="list todo-list" id="todoList"></div>
             <form class="todo-add" id="todoForm">
               <input id="todoInput" maxlength="200" autocomplete="off" placeholder="Add a task">
@@ -643,16 +655,19 @@
   var input = document.getElementById('input');
   var form = document.getElementById('form');
   var statusEl = document.getElementById('status');
-  var onlineEl = document.getElementById('online');
   var overlay = document.getElementById('overlay');
   var nameInput = document.getElementById('nameInput');
   var mynameEl = document.getElementById('myname');
   var notifyBtn = document.getElementById('notify');
-  var buddyListEl = document.getElementById('buddyList');
   var railEl = document.getElementById('rail');
   var fontSelect = document.getElementById('fontSelect');
   var sizeLabel = document.getElementById('sizeLabel');
   var clockEl = document.getElementById('clock');
+  var panelNotesEl = document.getElementById('panelNotes');
+  var memoListEl = document.getElementById('memoList');
+  var memoForm = document.getElementById('memoForm');
+  var memoInput = document.getElementById('memoInput');
+  var memoCountEl = document.getElementById('memoCount');
   var todoListEl = document.getElementById('todoList');
   var todoForm = document.getElementById('todoForm');
   var todoInput = document.getElementById('todoInput');
@@ -667,6 +682,7 @@
   var titlebarEl = document.getElementById('titlebar');
   var tbMaxBtn = document.getElementById('tbMax');
   var splitRailEl = document.getElementById('splitRail');
+  var splitNotesEl = document.getElementById('splitNotes');
   var splitCalendarEl = document.getElementById('splitCalendar');
   var panelCalendarEl = document.getElementById('panelCalendar');
   var clientEl = document.getElementById('client');
@@ -722,8 +738,12 @@
   // ---- resizable panels --------------------------------------------------
   var RAIL_MIN = 180; // narrowest the side panel may get
   var RAIL_GUTTER = 320; // room kept for the messages
+  var NOTES_MIN = 80; // shortest the notes pane may get
+  var NOTES_DEFAULT = 170; // how tall the notes pane is before it is dragged
+  var TODO_MIN = 108; // shortest the to-do list may get (matches its CSS)
   var CAL_MIN = 190; // shortest the calendar panel may get
-  var CAL_RESERVED = 200; // room kept for the buddy list and the to-do list
+  var SPLIT_GAPS = 16; // the two dividers plus the rail's gaps
+  var CAL_RESERVED = 210; // room kept for the notes and the to-do list
 
   function storedSize(key, min, max) {
     var stored = parseInt(localStorage.getItem(key), 10);
@@ -753,6 +773,18 @@
       panelCalendarEl.style.height = Math.round(Math.min(height, space)) + 'px';
     } else {
       panelCalendarEl.style.height = '';
+    }
+    var notes = storedSize('blah-notes-height', NOTES_MIN, 2000);
+    if (notes) {
+      // The to-do list and the calendar have to keep their own room, so a
+      // saved notes height is capped by whatever the rail has left to give
+      var notesRoom = Math.max(
+        NOTES_MIN,
+        measured(railEl, 600, 'height') - TODO_MIN - measured(panelCalendarEl, CAL_MIN, 'height') - SPLIT_GAPS
+      );
+      panelNotesEl.style.height = Math.round(Math.min(notes, notesRoom)) + 'px';
+    } else {
+      panelNotesEl.style.height = '';
     }
   }
 
@@ -793,12 +825,35 @@
   );
 
   dragHandle(
-    splitCalendarEl,
+    splitNotesEl,
     function () {
-      return {size: measured(panelCalendarEl, 250, 'height'), room: measured(railEl, 600, 'height')};
+      return {
+        size: measured(panelNotesEl, NOTES_DEFAULT, 'height'),
+        room: measured(railEl, 600, 'height'),
+        below: measured(panelCalendarEl, CAL_MIN, 'height'),
+      };
     },
     function (start, dx, dy) {
-      var max = Math.max(CAL_MIN, start.room - CAL_RESERVED);
+      // This divider sits above the to-do list but resizes the notes: the
+      // to-do list and the calendar keep the room they need
+      var max = Math.max(NOTES_MIN, start.room - TODO_MIN - start.below - SPLIT_GAPS);
+      panelNotesEl.style.height = Math.round(Math.max(NOTES_MIN, Math.min(max, start.size - dy))) + 'px';
+    },
+    function () { remember('blah-notes-height', panelNotesEl, 'height', NOTES_DEFAULT); },
+  );
+
+  dragHandle(
+    splitCalendarEl,
+    function () {
+      return {
+        size: measured(panelCalendarEl, 250, 'height'),
+        room: measured(railEl, 600, 'height'),
+        above: measured(panelNotesEl, NOTES_DEFAULT, 'height'),
+      };
+    },
+    function (start, dx, dy) {
+      var reserved = Math.max(CAL_RESERVED, start.above + TODO_MIN + SPLIT_GAPS);
+      var max = Math.max(CAL_MIN, start.room - reserved);
       panelCalendarEl.style.height = Math.round(Math.max(CAL_MIN, Math.min(max, start.size - dy))) + 'px';
     },
     function () { remember('blah-calendar-height', panelCalendarEl, 'height', 250); },
@@ -809,6 +864,10 @@
     localStorage.removeItem('blah-rail-width');
     railEl.style.width = '';
   });
+  splitNotesEl.addEventListener('dblclick', function () {
+    localStorage.removeItem('blah-notes-height');
+    panelNotesEl.style.height = '';
+  });
   splitCalendarEl.addEventListener('dblclick', function () {
     localStorage.removeItem('blah-calendar-height');
     panelCalendarEl.style.height = '';
@@ -817,8 +876,8 @@
   function applyPrefs() {
     var size = prefSize();
     document.documentElement.style.setProperty('--msg-size', size + 'px');
-    // The side panel (to-do list, calendar, buddy list) rides along with the
-    // same preference, kept in proportion and clamped so it stays readable
+    // The side panel (notes, to-do list, calendar) rides along with the same
+    // preference, kept in proportion and clamped so it stays readable
     document.documentElement.style.setProperty('--ui-size', Math.min(26, Math.max(10, Math.round(size * (2 / 3)))) + 'px');
     document.documentElement.style.setProperty('--msg-font', prefFont());
     sizeLabel.textContent = size + 'px';
@@ -890,6 +949,46 @@
     return pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
+  // ---- links in messages and notes ---------------------------------------
+  // Only http(s):// and www. are picked out, so ordinary text like "readme.txt"
+  // or "10.4" is left alone. The link keeps exactly the characters that were
+  // typed; the punctuation that follows it stays plain text.
+  var URL_PATTERN = /(?:https?:\/\/|www\.)[^\s<>"'\u0060]+/gi;
+
+  function linkifyInto(parent, text) {
+    var source = String(text || '');
+    var at = 0;
+    var match;
+    URL_PATTERN.lastIndex = 0;
+    while ((match = URL_PATTERN.exec(source)) !== null) {
+      var url = match[0];
+      var tail = '';
+      while (url.length && '.,;:!?]}"\''.indexOf(url.charAt(url.length - 1)) !== -1) {
+        tail = url.charAt(url.length - 1) + tail;
+        url = url.slice(0, -1);
+      }
+      // a closing bracket belongs to the address only if it opened one, so
+      // "http://x.com/wiki/Foo_(bar)" stays intact but "(see http://x.com)"
+      // does not swallow the bracket
+      while (url.charAt(url.length - 1) === ')' && url.split(')').length > url.split('(').length) {
+        tail = ')' + tail;
+        url = url.slice(0, -1);
+      }
+      if (!url) continue;
+      if (match.index > at) parent.appendChild(document.createTextNode(source.slice(at, match.index)));
+      var link = document.createElement('a');
+      link.className = 'link';
+      link.href = /^www\./i.test(url) ? 'http://' + url : url;
+      link.textContent = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      parent.appendChild(link);
+      if (tail) parent.appendChild(document.createTextNode(tail));
+      at = match.index + match[0].length;
+    }
+    if (at < source.length) parent.appendChild(document.createTextNode(source.slice(at)));
+  }
+
   function addMsg(m, notify) {
     if (m.id <= lastId) return;
     lastId = m.id;
@@ -911,7 +1010,8 @@
       div.appendChild(fileChip(m.file));
     } else {
       var text = document.createElement('span');
-      text.textContent = ' ' + m.text;
+      text.appendChild(document.createTextNode(' '));
+      linkifyInto(text, m.text);
       div.appendChild(text);
     }
     log.appendChild(div);
@@ -1161,34 +1261,11 @@
 
   notifyBtn.addEventListener('click', toggleNotifications);
 
-  // ---- buddy list --------------------------------------------------------
-  function renderBuddies(names, count) {
-    buddyListEl.innerHTML = '';
-    if (!names.length) {
-      var note = document.createElement('div');
-      note.className = 'buddy dim';
-      note.textContent = count ? count + ' signed on' : 'nobody else yet';
-      buddyListEl.appendChild(note);
-      return;
-    }
-    names.forEach(function (who) {
-      var row = document.createElement('div');
-      row.className = 'buddy';
-      var dot = document.createElement('span');
-      dot.className = 'dot';
-      dot.style.background = buddyColor(who);
-      var label = document.createElement('span');
-      label.textContent = who === name ? who + ' (you)' : who;
-      row.appendChild(dot);
-      row.appendChild(label);
-      buddyListEl.appendChild(row);
-    });
-  }
-
-  function setOnline(count, names) {
-    onlineEl.textContent = '(' + count + ')';
+  // ---- who is signed on --------------------------------------------------
+  // The list of names has no panel of its own any more: People > Who's here
+  // asks for it, and everyone's name still gets its own colour in the chat.
+  function setSignedOn(names) {
     knownNames = names || [];
-    renderBuddies(knownNames, count);
   }
 
   function whoIsHere() {
@@ -1199,13 +1276,15 @@
     addSys('signed on: ' + knownNames.join(', '));
   }
 
-  // ---- shared to-do list + calendar --------------------------------------
+  // ---- shared notes, to-do list + calendar -------------------------------
   var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
   var WEEKDAYS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
   var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  var board = { revision: -1, tasks: [], notes: {}, events: [] };
+  var board = { revision: -1, memos: [], tasks: [], notes: {}, events: [] };
   var editingId = null;
   var editDraft = '';
+  var editingMemoId = null;
+  var memoDraft = '';
   var noteDirty = false;
   var noteLoadedDay = '';
   var today = new Date();
@@ -1232,8 +1311,8 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     }).then(function (r) {
-      if (r.status === 429) addSys('slow down, that was a lot of to-do changes');
-      else if (r.status === 409) addSys('the to-do list is full');
+      if (r.status === 429) addSys('slow down, that was a lot of side panel changes');
+      else if (r.status === 409) addSys(String(payload.action || '').indexOf('memo') === 0 ? 'the notes list is full' : 'the to-do list is full');
       else if (!r.ok) addSys(failure || 'that change did not stick');
       else if (usingPolling) refreshBoard();
     }).catch(function () { addSys(failure || 'that change did not stick'); });
@@ -1250,10 +1329,12 @@
     if (!next || typeof next !== 'object' || next.revision === board.revision) return;
     board = {
       revision: next.revision,
+      memos: Array.isArray(next.memos) ? next.memos : [],
       tasks: Array.isArray(next.tasks) ? next.tasks : [],
       notes: next.notes && typeof next.notes === 'object' ? next.notes : {},
       events: Array.isArray(next.events) ? next.events : []
     };
+    renderMemos();
     renderTasks();
     renderCalendar();
     renderNote();
@@ -1363,6 +1444,101 @@
     postBoard({ action: 'edit', id: id, text: text }, 'could not save that task');
   }
 
+  // ---- notes pane --------------------------------------------------------
+  // One short line each, shared by the room, no titles to fill in.
+  function renderMemos() {
+    memoCountEl.textContent = board.memos.length ? '(' + board.memos.length + ')' : '';
+    memoListEl.innerHTML = '';
+
+    if (!board.memos.length) {
+      var empty = document.createElement('div');
+      empty.className = 'memo-empty';
+      empty.textContent = 'Nothing scribbled down yet.';
+      memoListEl.appendChild(empty);
+      return;
+    }
+
+    board.memos.forEach(function (memo) {
+      var row = document.createElement('div');
+      row.className = 'memo-item';
+
+      if (editingMemoId === memo.id) {
+        var edit = document.createElement('input');
+        edit.className = 'memo-edit';
+        edit.maxLength = 200;
+        edit.value = memoDraft;
+        edit.addEventListener('input', function () { memoDraft = edit.value; });
+        edit.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') { e.preventDefault(); saveMemoEdit(memo.id, edit.value); }
+          else if (e.key === 'Escape') { editingMemoId = null; renderMemos(); }
+        });
+        edit.addEventListener('blur', function () {
+          if (editingMemoId !== memo.id) return;
+          editingMemoId = null;
+          renderMemos();
+        });
+        row.appendChild(edit);
+
+        var save = document.createElement('button');
+        save.className = 'task-btn';
+        save.type = 'button';
+        save.textContent = '\u2713';
+        save.title = 'save';
+        save.addEventListener('click', function () { saveMemoEdit(memo.id, edit.value); });
+        row.appendChild(save);
+
+        memoListEl.appendChild(row);
+        edit.focus();
+        return;
+      }
+
+      var body = document.createElement('div');
+      body.className = 'memo-body';
+      var text = document.createElement('div');
+      text.className = 'memo-text';
+      linkifyInto(text, memo.text);
+      var meta = document.createElement('div');
+      meta.className = 'memo-meta';
+      meta.textContent = memo.by ? 'added by ' + memo.by : '';
+      body.appendChild(text);
+      body.appendChild(meta);
+      row.appendChild(body);
+
+      var editBtn = document.createElement('button');
+      editBtn.className = 'task-btn';
+      editBtn.type = 'button';
+      editBtn.textContent = '\u270E';
+      editBtn.title = 'edit this note';
+      editBtn.addEventListener('click', function () {
+        editingMemoId = memo.id;
+        memoDraft = memo.text;
+        renderMemos();
+      });
+      row.appendChild(editBtn);
+
+      var delBtn = document.createElement('button');
+      delBtn.className = 'task-btn';
+      delBtn.type = 'button';
+      delBtn.textContent = '\u2715';
+      delBtn.title = 'delete this note';
+      delBtn.addEventListener('click', function () {
+        if (!confirm('Delete "' + memo.text + '"?')) return;
+        postBoard({ action: 'memo-delete', id: memo.id }, 'could not delete that note');
+      });
+      row.appendChild(delBtn);
+
+      memoListEl.appendChild(row);
+    });
+  }
+
+  function saveMemoEdit(id, value) {
+    var text = String(value || '').trim();
+    editingMemoId = null;
+    renderMemos();
+    if (!text) return;
+    postBoard({ action: 'memo-edit', id: id, text: text }, 'could not save that note');
+  }
+
   function eventsForDay(day) {
     return board.events.filter(function (ev) { return dayKey(new Date(ev.at)) === day; });
   }
@@ -1457,6 +1633,14 @@
     postBoard({ action: 'add', text: text }, 'could not add that task');
   });
 
+  memoForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = memoInput.value.trim();
+    if (!text || !name) return;
+    memoInput.value = '';
+    postBoard({ action: 'memo-add', text: text }, 'could not add that note');
+  });
+
   noteInput.addEventListener('input', function () { noteDirty = true; });
 
   document.getElementById('noteSave').addEventListener('click', function () {
@@ -1531,6 +1715,7 @@
     },
     'mi-reset-sizes': function () {
       localStorage.removeItem('blah-rail-width');
+      localStorage.removeItem('blah-notes-height');
       localStorage.removeItem('blah-calendar-height');
       applySizes();
     },
@@ -1669,7 +1854,7 @@
           if (replay) showWelcome();
           data.messages.forEach(function (m) { addMsg(m, !replay); });
           if (nearBottom) log.scrollTop = log.scrollHeight;
-          setOnline(data.online, data.names);
+          setSignedOn(data.names);
           if (typeof data.boardRevision === 'number' && data.boardRevision !== board.revision) refreshBoard();
           setStatus('online', true);
         })
@@ -1717,7 +1902,7 @@
         addSys(data.name + ' cleared the chat');
         showWelcome();
       } else if (data.type === 'online') {
-        setOnline(data.count, data.names);
+        setSignedOn(data.names);
       } else if (data.type === 'board') {
         applyBoard(data.board);
       }

@@ -19,8 +19,9 @@ const CLEAR_COOLDOWN_MS = 3000; // minimum gap between /clear calls
 const MAX_TASKS = 200;
 const MAX_TASK_TEXT = 200;
 const MAX_NOTE_TEXT = 1000;
+const MAX_MEMOS = 200; // short notes in the side panel (text capped like a to-do)
 const MAX_EVENTS = 300; // recent to-do activity shown on the calendar
-const BOARD_BURST = 30; // to-do edits one name may make per window
+const BOARD_BURST = 30; // to-do and note edits one name may make per window
 const MAX_FILE_BYTES = Math.max(1, Number(process.env.BLAH_MAX_FILE_MB) || 50) * 1024 * 1024;
 const MAX_FILE_NAME = 120;
 const UPLOAD_BURST = 10; // files one name may share per window
@@ -35,15 +36,17 @@ const messages = []; // {id, name, text, time}
 const sseClients = new Map(); // res -> {name}
 const pollers = new Map(); // window id -> {name, seen}
 const sendTimes = new Map(); // name -> recent send timestamps
-const boardTimes = new Map(); // name -> recent to-do write timestamps
+const boardTimes = new Map(); // name -> recent to-do / note write timestamps
 const uploadTimes = new Map(); // name -> recent upload timestamps
 let activeUploads = 0;
 
-// The shared to-do list and the per-day calendar notes.
+// The shared to-do list, the side-panel notes and the per-day calendar notes.
 let taskSeq = 0;
+let memoSeq = 0;
 let boardRevision = 0;
 const tasks = []; // {id, text, done, by, at, updatedBy, updatedAt}
-const notes = {}; // 'YYYY-MM-DD' -> {text, by, at}
+const memos = []; // side-panel notes: {id, text, by, at, updatedBy, updatedAt}
+const notes = {}; // calendar day notes: 'YYYY-MM-DD' -> {text, by, at}
 const boardEvents = []; // {at, type, taskId, text, by}
 
 // BLAH_DEV=1 re-reads the page and the icon from disk on every request, so a
@@ -181,6 +184,21 @@ if (persistenceReady && fs.existsSync(BOARD_FILE)) {
         }
       }
     }
+    if (Array.isArray(saved.memos)) {
+      for (const m of saved.memos.slice(-MAX_MEMOS)) {
+        if (m && Number.isInteger(m.id) && typeof m.text === 'string' && m.text.trim()) {
+          memos.push({
+            id: m.id,
+            text: m.text.slice(0, MAX_TASK_TEXT),
+            by: typeof m.by === 'string' ? m.by : '',
+            at: Number(m.at) || Date.now(),
+            updatedBy: typeof m.updatedBy === 'string' ? m.updatedBy : '',
+            updatedAt: Number(m.updatedAt) || Number(m.at) || Date.now(),
+          });
+        }
+      }
+      memoSeq = memos.reduce((highest, m) => Math.max(highest, m.id), 0);
+    }
     if (Array.isArray(saved.events)) {
       for (const e of saved.events.slice(-MAX_EVENTS)) {
         if (e && typeof e.type === 'string' && typeof e.text === 'string') {
@@ -212,15 +230,15 @@ function saveHistory() {
 function saveBoard() {
   if (!persistenceReady) return;
   try {
-    fs.writeFileSync(BOARD_FILE + '.tmp', JSON.stringify({ revision: boardRevision, tasks, notes, events: boardEvents }));
+    fs.writeFileSync(BOARD_FILE + '.tmp', JSON.stringify({ revision: boardRevision, tasks, notes, memos, events: boardEvents }));
     fs.renameSync(BOARD_FILE + '.tmp', BOARD_FILE);
   } catch (err) {
-    console.warn(`BLAH: failed to save the to-do list (${err.message})`);
+    console.warn(`BLAH: failed to save the board file (${err.message})`);
   }
 }
 
 function boardPayload() {
-  return { revision: boardRevision, tasks, notes, events: boardEvents };
+  return { revision: boardRevision, tasks, notes, memos, events: boardEvents };
 }
 
 function boardChanged() {
@@ -307,7 +325,7 @@ function onlineCount() {
   return sseClients.size + pollCount;
 }
 
-// Screen names of everyone signed on, for the buddy list. Clients that never
+// Screen names of everyone signed on, for People > Who's here. Clients that never
 // told us a name (older pages, or a poll straight after a reload) are skipped.
 function onlineNames() {
   const names = new Set();
@@ -441,7 +459,7 @@ function handleRequest(req, res) {
     const since = Number(url.searchParams.get('since')) || 0;
     // Key on the chat window: behind Umbrel's app proxy every poll arrives
     // from the proxy's IP, so remoteAddress can't tell devices apart. The name
-    // feeds the buddy list, and doubles as a fallback window id.
+    // feeds the who's-here list, and doubles as a fallback window id.
     const who = String(url.searchParams.get('u') || '').trim().slice(0, MAX_NAME);
     const windowId = String(url.searchParams.get('w') || who || req.socket.remoteAddress || 'anon').slice(0, 64);
     pollers.set(windowId, { name: who, seen: Date.now() });
@@ -498,8 +516,10 @@ function handleRequest(req, res) {
       // Validate before the request counts against the flood budget, so a
       // mistyped action or a stale task id doesn't eat into it
       const needsTask = action === 'edit' || action === 'toggle' || action === 'delete';
+      const needsMemo = action === 'memo-edit' || action === 'memo-delete';
       const task = needsTask ? tasks.find(t => t.id === Number(payload.id)) : null;
-      if (!['add', 'edit', 'toggle', 'delete', 'note'].includes(action)) {
+      const memo = needsMemo ? memos.find(m => m.id === Number(payload.id)) : null;
+      if (!['add', 'edit', 'toggle', 'delete', 'note', 'memo-add', 'memo-edit', 'memo-delete'].includes(action)) {
         fail(400, 'unknown action');
         return;
       }
@@ -507,7 +527,12 @@ function handleRequest(req, res) {
         fail(404, 'no such task');
         return;
       }
-      if ((action === 'add' || action === 'edit') && !text) {
+      if (needsMemo && !memo) {
+        fail(404, 'no such note');
+        return;
+      }
+      const writesText = action === 'add' || action === 'edit' || action === 'memo-add' || action === 'memo-edit';
+      if (writesText && !text) {
         fail(400, 'text required');
         return;
       }
@@ -541,6 +566,19 @@ function handleRequest(req, res) {
         for (let i = boardEvents.length - 1; i >= 0; i--) {
           if (boardEvents[i].taskId === task.id) boardEvents.splice(i, 1);
         }
+      } else if (action === 'memo-add') {
+        if (memos.length >= MAX_MEMOS) {
+          fail(409, 'the notes list is full');
+          return;
+        }
+        const now = Date.now();
+        memos.push({ id: ++memoSeq, text, by: name, at: now, updatedBy: name, updatedAt: now });
+      } else if (action === 'memo-edit') {
+        memo.text = text;
+        memo.updatedBy = name;
+        memo.updatedAt = Date.now();
+      } else if (action === 'memo-delete') {
+        memos.splice(memos.indexOf(memo), 1);
       } else if (action === 'note') {
         const day = String(payload.day || '');
         const parsedDay = new Date(day + 'T00:00:00Z');

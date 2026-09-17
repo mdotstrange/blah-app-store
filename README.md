@@ -6,11 +6,12 @@ reach your Umbrel, pick a name, and start typing — everyone with the app
 open sees the same room.
 
 - Dressed up like a 1990s instant messenger: blue title bar, grey beveled
-  buttons, white message pane, buddy list, Win98-style menus
+  buttons, white message pane, a pad of notes, Win98-style menus
 - Live messages over server-sent events, with a polling fallback
 - Username = whatever you type in once (a device name like `MacBook-Pro`
   works great); it's remembered by that browser
-- Buddy list showing who is signed on, plus a count of open chat windows
+- Notes pane for short scribbles the whole room can see; any web address in a
+  note is a link you can click
 - Shared to-do list: anyone in the room can add tasks, tick them off (they get
   struck through), edit them or delete them
 - Calendar under the checklist with today highlighted; task creates and edits
@@ -99,26 +100,28 @@ with the cursor in the input box, ready to reply.
 
 ## Around the window
 
-- **Buddy list** (right hand panel) shows everyone signed on, each with their
-  own name colour. Names come from open browser windows and disappear when
-  they close; the number in the panel header counts windows, so two windows
-  using the same name count twice.
-- **To Do** (below the buddy list) is one list shared by the whole room. Type a
-  task and press **Add**; tick the checkbox to strike it through, use the
-  pencil to edit in place (Enter saves, Esc gives up), and the ✕ to delete it.
-  The header shows how many are still open.
+- **Notes** (top of the right hand panel) is a shared pad of short scribbles.
+  Type a line and press **Add** — no titles, no formatting, just the text —
+  and any web address you paste turns into a link you can click. The pencil
+  edits a note in place (Enter saves, Esc gives up), the ✕ deletes it, and the
+  list scrolls once there are more notes than fit.
+- **To Do** (below the notes) is one list shared by the whole room. Type a task
+  and press **Add**; tick the checkbox to strike it through, use the pencil to
+  edit in place (Enter saves, Esc gives up), and the ✕ to delete it. The header
+  shows how many are still open.
 - **Calendar** under that: today is highlighted in blue, days where a task was
   created or edited get a red dot, and days with a note get a green one. Click
   a day to see what changed on it and to leave a note — notes are per day and
   shared with everyone. ◀ ▶ page through the months.
 - **Resizing**: drag the divider on the left of the side panel to make the whole
-  column wider (the calendar cells grow with it), and drag the divider above the
-  calendar to make the calendar taller. Double-click either divider — or use
-  **View → Reset panel sizes** — to go back to the automatic size. Both sizes
-  are remembered by your browser.
-- The to-do list, its history and the day notes live in `blah/data/board.json`
-  next to the chat history, so they survive restarts and app updates. Deleting
-  a task also removes its calendar entries.
+  column wider (the calendar cells grow with it), drag the divider above the
+  to-do list to make the notes taller, and drag the divider above the calendar
+  to make the calendar taller. Double-click a divider — or use
+  **View → Reset panel sizes** — to go back to the automatic size. Every size
+  is remembered by your browser.
+- The notes, the to-do list, its history and the day notes live in
+  `blah/data/board.json` next to the chat history, so they survive restarts and
+  app updates. Deleting a task also removes its calendar entries.
 - **Text sizer**: `A-` / `A+` next to the font dropdown, or
   **View → Bigger / Smaller / Reset text size**. Default is bigger than the
   old terminal look used to be. It sizes the whole thing — chat messages, task
@@ -127,8 +130,8 @@ with the cursor in the input box, ready to reply.
   proportion so the side panel stays readable at every setting. The size, the
   font and the panel toggles are all remembered by your browser.
 - **Menus**: `File` (rename, clear history, sign off), `View` (text size, font,
-  buddy list, notifications), `Insert` (emoticons and the `/clear` command),
-  `People` (who's here, rename).
+  show/hide the side panel, notifications), `Insert` (emoticons and the
+  `/clear` command), `People` (who's here, rename).
 - **Title bar buttons** work: `□` maximises (fills the screen, and the side
   panel widens with it), `_` puts the window back to its default size, and
   double-clicking the title bar does the same as maximise. Your choice is
@@ -136,8 +139,9 @@ with the cursor in the input box, ready to reply.
 - **Sending**: type and press Enter, or click **Send**. Your own messages are
   lightly tinted so they are easy to spot.
 - Messages are plain text — no bold or colours to fiddle with — but each name
-  gets its own colour automatically. The taskbar button jumps your cursor to
-  the message box.
+  gets its own colour automatically, and any `http(s)://` or `www.` address
+  you type becomes a link you can click. The taskbar button jumps your cursor
+  to the message box.
 
 ## Sharing files
 
@@ -166,7 +170,7 @@ You can drop several files at once, and the sending line appears as you go.
   Files stream straight to disk as they arrive, so a big one never sits in the
   Umbrel's memory.
 
-## Notes
+## Odds and ends
 
 - **No login, by design.** `PROXY_AUTH_ADD: "false"` in
   `blah/docker-compose.yml` makes "no Umbrel login wall" the default, so anyone
@@ -182,8 +186,8 @@ You can drop several files at once, and the sending line appears as you go.
   Linux capability dropped. A small `hooks/pre-start` script hands any data
   written by older, root-running versions over to that user on the first start
   after updating.
-- "online" counts open chat windows, not people: each tab, phone, or laptop
-  with the chat open counts once, even when two of them pick the same name.
+- **People → Who's here** lists the names signed on, and each name disappears
+  a few moments after the last window using it closes.
 - Flood control is deliberately gentle: a name can send 15 messages per 10
   seconds and `/clear` has a 3 second cooldown, so one window can't blank the
   room or flood it on a loop. Renaming resets the message budget, so treat it
@@ -234,12 +238,12 @@ Worth knowing:
 - Notifications work locally too, because browsers treat `localhost` as a
   secure address, so the `notify` button behaves exactly as it does on the
   Umbrel.
-- To test two participants (buddy list, shared to-do list, unread counts), open
-  a **private / incognito** window as well. Normal tabs share `localStorage`
-  and would sign on with the same name.
-- Local chat history, to-do list and calendar notes are written to `blah/data/`
-  — the same layout the app uses on the Umbrel — and are ignored by git. Run
-  `dev-reset.bat` to wipe them and start from an empty room.
+- To test two participants (shared notes and to-do list, unread counts), open a
+  **private / incognito** window as well. Normal tabs share `localStorage` and
+  would sign on with the same name.
+- Local chat history, notes, to-do list and calendar notes are written to
+  `blah/data/` — the same layout the app uses on the Umbrel — and are ignored
+  by git. Run `dev-reset.bat` to wipe them and start from an empty room.
 - Overrides: `set PORT=3848` or `set BLAH_DATA=D:\somewhere` before running.
 - On macOS or Linux the same thing is one line:
 

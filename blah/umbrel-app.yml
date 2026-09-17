@@ -2,13 +2,13 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.11.0"
+version: "1.12.0"
 tagline: A dead-simple local chat room
 icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
   BLAH is a tiny early-internet-style chat room for your local network,
   dressed up like a 1990s instant messenger: blue title bar, grey beveled
-  buttons, white message pane and a buddy list.
+  buttons, a white message pane, a pad of notes and a shared to-do list.
 
 
   No accounts, no passwords, no setup. Open it from any device that can
@@ -20,11 +20,14 @@ description: >-
   restarts. Anyone in the room can wipe the history for everyone with
   the clear button.
 releaseNotes: >-
-  Hardening release. The server no longer runs as root inside its container,
-  shuts the door on other websites posting to or clearing your room behind your
-  back, and shrugs off a couple of malformed requests that could previously
-  restart it. Shared files now stream straight to disk instead of sitting in
-  memory while they upload. No visible changes to the chat itself.
+  The side panel no longer shows a list of everyone signed on. In its place is
+  a Notes pane: type a short line, press Add and everyone in the room sees it -
+  no titles, one line per note, editable and deletable by anyone, and it
+  scrolls once it fills up. Like the to-do list and the calendar, the notes are
+  shared and saved on your Umbrel. A divider between the notes and the to-do
+  list lets you drag the two to whatever sizes you like, and web addresses
+  typed in the chat or in a note now come out as links you can click.
+  People > Who's here still tells you who is signed on.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []
