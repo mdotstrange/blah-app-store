@@ -1,9 +1,39 @@
 #!/usr/bin/env bash
-# Runs on the Umbrel (as root) before the container starts. Versions up to
-# 1.10.0 ran BLAH as root, so the chat history, to-do list and shared files
-# they wrote are root-owned. The container now runs as uid 1000, so hand that
-# data over. Harmless on a fresh install and every start after the first.
+# Runs on the Umbrel (as root) right before umbreld runs `compose up --build`.
 set -euo pipefail
-data_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/data"
+app_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+data_dir="${app_dir}/data"
+
+# Versions up to 1.10.0 ran BLAH as root, so the chat history, to-do list and
+# shared files they wrote are root-owned. The container now runs as uid 1000,
+# so hand that data over. Harmless on a fresh install and every start after.
 mkdir -p "${data_dir}"
 chown -R 1000:1000 "${data_dir}"
+
+# An app update only copies docker-compose.yml, hooks/ and umbrel-app.yml into
+# the installed app, never the code the image is built from. So bring the code
+# over from umbreld's clone of this app store, which the build then picks up.
+# It only happens when docker-compose.yml's BLAH_VERSION matches the store's
+# umbrel-app.yml version, i.e. right after the Update button was pressed:
+# a plain restart never sneaks in a newer version nobody asked for.
+# data/ is never touched.
+installed="$(sed -n 's/^ *BLAH_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' "${app_dir}/docker-compose.yml" | head -n 1)"
+[[ -n "${installed}" ]] || exit 0
+for store in "${app_dir}/../../app-stores/"*/; do
+  source_dir="${store}blah"
+  [[ -f "${store}umbrel-app-store.yml" && -f "${source_dir}/umbrel-app.yml" ]] || continue
+  grep -qE '^id: *"?blah"? *$' "${store}umbrel-app-store.yml" || continue
+  version="$(sed -n 's/^version: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' "${source_dir}/umbrel-app.yml" | head -n 1)"
+  [[ "${version}" == "${installed}" ]] || continue
+  for file in server.js Dockerfile .dockerignore icon.svg; do
+    if [[ -f "${source_dir}/${file}" ]]; then
+      cp -f "${source_dir}/${file}" "${app_dir}/${file}"
+      chown 1000:1000 "${app_dir}/${file}"
+    fi
+  done
+  mkdir -p "${app_dir}/public"
+  cp -f "${source_dir}/public/"* "${app_dir}/public/"
+  chown -R 1000:1000 "${app_dir}/public"
+  echo "BLAH: installed the ${version} code from ${store}"
+  break
+done

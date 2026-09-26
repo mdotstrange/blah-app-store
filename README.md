@@ -199,9 +199,14 @@ You can drop several files at once, and the sending line appears as you go.
   seconds and `/clear` has a 3 second cooldown, so one window can't blank the
   room or flood it on a loop. Renaming resets the message budget, so treat it
   as a speed bump rather than a ban.
-- To update after changing the code: push to GitHub, bump `version` in
-  `blah/umbrel-app.yml`, and the dashboard will offer an Update button
-  (umbrelOS re-checks app stores every few minutes). Because the image is
+- To update after changing the code: bump `version` in `blah/umbrel-app.yml`
+  **and** `BLAH_VERSION` in `blah/docker-compose.yml` to the same number, push
+  to GitHub, and the dashboard will offer an Update button (umbrelOS re-checks
+  app stores every few minutes). An umbrelOS update only copies
+  `docker-compose.yml`, `hooks/` and `umbrel-app.yml` into the installed app,
+  so `hooks/pre-start` copies the rest of the code (server.js, public/,
+  Dockerfile) over from the app store when the two versions match. It never
+  touches `data/`, so updating keeps the chat, notes, to-dos and files. Because the image is
   built on the Umbrel rather than pulled by name, each update leaves the
   previous build behind as a dangling image; `docker image prune -f` over SSH
   reclaims the space. Publishing a multi-arch image to GHCR and pointing
