@@ -17,8 +17,11 @@ chown -R 1000:1000 "${data_dir}"
 # umbrel-app.yml version, i.e. right after the Update button was pressed:
 # a plain restart never sneaks in a newer version nobody asked for.
 # data/ is never touched.
-installed="$(sed -n 's/^ *BLAH_VERSION: *"\{0,1\}\([^"]*\)"\{0,1\} *$/\1/p' "${app_dir}/docker-compose.yml" | head -n 1)"
-[[ -n "${installed}" ]] || exit 0
+installed="$(sed -n "s/^ *BLAH_VERSION: *[\"']\{0,1\}\([^\"']*\)[\"']\{0,1\} *\$/\1/p" "${app_dir}/docker-compose.yml" | head -n 1)"
+if [[ -z "${installed}" ]]; then
+  echo "BLAH: no BLAH_VERSION in docker-compose.yml, keeping the installed code"
+  exit 0
+fi
 for store in "${app_dir}/../../app-stores/"*/; do
   source_dir="${store}blah"
   [[ -f "${store}umbrel-app-store.yml" && -f "${source_dir}/umbrel-app.yml" ]] || continue
@@ -35,5 +38,6 @@ for store in "${app_dir}/../../app-stores/"*/; do
   cp -f "${source_dir}/public/"* "${app_dir}/public/"
   chown -R 1000:1000 "${app_dir}/public"
   echo "BLAH: installed the ${version} code from ${store}"
-  break
+  exit 0
 done
+echo "BLAH: no app store copy of ${installed} found, keeping the installed code"

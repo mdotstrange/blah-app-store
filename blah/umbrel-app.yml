@@ -2,7 +2,7 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.13.0"
+version: "1.13.1"
 tagline: A dead-simple local chat room
 icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
@@ -33,7 +33,9 @@ releaseNotes: >-
   Snow, Blue Dalmatian or Flower Power - and everyone else's speech balloons
   come in their own iMac colours. The Windows 98 look is still there: choose View > Windows 98 theme, and
   View > Panther theme to switch back. Each browser remembers its theme and
-  flavour.
+  flavour. (1.13.1: updating now installs the new code too, so this is the
+  update that actually brings the new look - your chat, notes, to-dos and
+  files are kept.)
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []
