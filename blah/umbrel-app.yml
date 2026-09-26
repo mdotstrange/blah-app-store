@@ -2,13 +2,15 @@ manifestVersion: 1
 id: blah
 category: social
 name: BLAH
-version: "1.12.0"
+version: "1.13.0"
 tagline: A dead-simple local chat room
 icon: https://raw.githubusercontent.com/MdotStrange/blah-app-store/master/blah/icon.svg
 description: >-
   BLAH is a tiny early-internet-style chat room for your local network,
-  dressed up like a 1990s instant messenger: blue title bar, grey beveled
-  buttons, a white message pane, a pad of notes and a shared to-do list.
+  dressed up like a Mac OS X Panther chat app: a brushed-metal window,
+  iChat-style speech balloons, glossy Aqua buttons, a Stickies pad of notes
+  and a shared to-do list. Prefer the 1990s? View > Windows 98 theme brings
+  back the blue title bar and grey beveled buttons.
 
 
   No accounts, no passwords, no setup. Open it from any device that can
@@ -20,14 +22,18 @@ description: >-
   restarts. Anyone in the room can wipe the history for everyone with
   the clear button.
 releaseNotes: >-
-  The side panel no longer shows a list of everyone signed on. In its place is
-  a Notes pane: type a short line, press Add and everyone in the room sees it -
-  no titles, one line per note, editable and deletable by anyone, and it
-  scrolls once it fills up. Like the to-do list and the calendar, the notes are
-  shared and saved on your Umbrel. A divider between the notes and the to-do
-  list lets you drag the two to whatever sizes you like, and web addresses
-  typed in the chat or in a note now come out as links you can click.
-  People > Who's here still tells you who is signed on.
+  BLAH now looks like a Mac OS X 10.3 Panther app. The window is brushed
+  metal with red, yellow and green buttons, the menus sit in a menu bar
+  across the top of the screen with the clock, and BLAH has its own icon in
+  a Dock at the bottom. Messages appear as iChat-style speech balloons (yours
+  on the right), buttons are glossy Aqua, the notes are a yellow Stickies pad,
+  today glows in the calendar, and picking a name drops down as a sheet.
+  The new Flavor menu dyes it all in an original iMac colour - Bondi Blue,
+  Blueberry, Grape, Tangerine, Lime, Strawberry, Graphite, Ruby, Sage, Indigo,
+  Snow, Blue Dalmatian or Flower Power - and everyone else's speech balloons
+  come in their own iMac colours. The Windows 98 look is still there: choose View > Windows 98 theme, and
+  View > Panther theme to switch back. Each browser remembers its theme and
+  flavour.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []

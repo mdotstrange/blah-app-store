@@ -5,8 +5,15 @@ No accounts, no passwords, no database. Open it from any device that can
 reach your Umbrel, pick a name, and start typing — everyone with the app
 open sees the same room.
 
-- Dressed up like a 1990s instant messenger: blue title bar, grey beveled
-  buttons, white message pane, a pad of notes, Win98-style menus
+- Dressed up like a Mac OS X 10.3 Panther chat app: brushed-metal window,
+  traffic-light buttons, a menu bar across the top, a Dock, iChat-style
+  speech balloons, glossy Aqua buttons and a Stickies pad of notes
+- Flavor menu: dye the whole look in an original iMac G3 colour (Bondi Blue,
+  Tangerine, Lime, Graphite, Blue Dalmatian, Flower Power and the rest);
+  other people's balloons each get their own iMac colour
+- View > Windows 98 theme swaps to the old 1990s instant messenger look (blue
+  title bar, grey beveled buttons, Win98-style menus); each browser remembers
+  its choice
 - Live messages over server-sent events, with a polling fallback
 - Username = whatever you type in once (a device name like `MacBook-Pro`
   works great); it's remembered by that browser
