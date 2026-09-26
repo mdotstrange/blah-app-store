@@ -22,6 +22,9 @@ open sees the same room.
 - Bitcoin addresses in the chat or a note are checked (1..., 3..., bc1...
   including Taproot): valid ones get an orange ₿ and open on mempool.space,
   mistyped ones get a red wavy underline and a "do not send" warning
+- Names with "baba" or "mike" in them (any case) get an animated picture in
+  front of them in the chat (`public/baba.gif`, `public/mike.gif`; the list is
+  `NAME_BADGES` in `index.html` and `BADGE_FILES` in `server.js`)
 - Shared to-do list: anyone in the room can add tasks, tick them off (they get
   struck through), edit them or delete them
 - Full-page calendar behind the calendar icon in the Dock (or the Calendar

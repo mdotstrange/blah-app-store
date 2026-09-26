@@ -76,8 +76,26 @@ function loadIndex() {
   return { page, etag: etagFor(page) };
 }
 
+// Little animated pictures shown next to some names in the chat (NAME_BADGES
+// in index.html). A fixed list, so no file path ever comes from the URL.
+const BADGE_FILES = ['baba.gif', 'mike.gif'];
+
+function loadBadges() {
+  const badges = {};
+  for (const file of BADGE_FILES) {
+    try {
+      const data = fs.readFileSync(path.join(__dirname, 'public', file));
+      badges[`/${file}`] = { data, etag: etagFor(data) };
+    } catch (err) {
+      console.warn(`BLAH: ${file} is missing (${err.message}); that name badge won't show`);
+    }
+  }
+  return badges;
+}
+
 let index = loadIndex();
 let iconSvg = readIcon();
+let badges = loadBadges();
 
 function currentIndex() {
   if (DEV_RELOAD) index = loadIndex();
@@ -834,6 +852,22 @@ function handleRequest(req, res) {
       'Cache-Control': DEV_RELOAD ? 'no-store' : 'public, max-age=86400',
     });
     res.end(icon);
+    return;
+  }
+
+  const badge = (DEV_RELOAD ? loadBadges() : badges)[url.pathname];
+  if (badge) {
+    if (req.headers['if-none-match'] === badge.etag) {
+      res.writeHead(304, { ETag: badge.etag });
+      res.end();
+      return;
+    }
+    res.writeHead(200, {
+      'Content-Type': 'image/gif',
+      'Cache-Control': DEV_RELOAD ? 'no-store' : 'public, max-age=86400',
+      ETag: badge.etag,
+    });
+    res.end(badge.data);
     return;
   }
 

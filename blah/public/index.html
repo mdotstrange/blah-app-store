@@ -187,6 +187,15 @@
   }
   .msg .time { color: var(--shadow); font-family: Tahoma, sans-serif; font-size: 0.62em; margin-right: 5px; }
   .msg .name { font-weight: bold; color: var(--buddy); }
+  /* the animated pixel-art picture some names get: hard-edged, never smoothed,
+     and sized by applyBadgeSize() so each art pixel is whole screen pixels */
+  .name-badge {
+    width: var(--badge-size, 32px);
+    height: var(--badge-size, 32px);
+    margin-right: 0.25em;
+    vertical-align: middle;
+    image-rendering: pixelated;
+  }
   .msg.mine { background: #f2f5ff; }
   .sys { color: #6b6b6b; font-style: italic; }
 
@@ -1778,6 +1787,7 @@
     document.documentElement.style.setProperty('--ui-size', Math.min(26, Math.max(10, Math.round(size * (2 / 3)))) + 'px');
     document.documentElement.style.setProperty('--msg-font', prefFont());
     sizeLabel.textContent = size + 'px';
+    applyBadgeSize();
     fontSelect.value = prefFont();
     document.documentElement.setAttribute('data-flavor', prefFlavor());
     railEl.style.display = prefRail() ? '' : 'none';
@@ -2050,6 +2060,36 @@
   }
   // ---- end bitcoin addresses ---------------------------------------------
 
+  // Names containing these (any case) get a little animated picture in front
+  // of them in the chat; a name matching both gets both
+  var NAME_BADGES = [
+    { pattern: /baba/i, src: '/baba.gif' },
+    { pattern: /mike/i, src: '/mike.gif' }
+  ];
+
+  // The badges are 32x32 pixel art. Nearest-neighbour scaling only stays crisp
+  // at a whole number of screen pixels per art pixel, so the size is worked
+  // out in real device pixels (Windows' 125%/150% display scaling included),
+  // aiming for about 1.8 lines of message text.
+  var BADGE_ART_PX = 32;
+
+  function applyBadgeSize() {
+    var dpr = window.devicePixelRatio || 1;
+    var perArtPixel = Math.max(1, Math.round(prefSize() * 1.8 * dpr / BADGE_ART_PX));
+    document.documentElement.style.setProperty('--badge-size', (BADGE_ART_PX * perArtPixel / dpr) + 'px');
+  }
+
+  function appendNameBadges(parent, who) {
+    NAME_BADGES.forEach(function (badge) {
+      if (!badge.pattern.test(who)) return;
+      var img = document.createElement('img');
+      img.className = 'name-badge';
+      img.src = badge.src;
+      img.alt = ''; // decoration: the name right after it says who it is
+      parent.appendChild(img);
+    });
+  }
+
   function addMsg(m, notify) {
     if (m.id <= lastId) return;
     lastId = m.id;
@@ -2068,6 +2108,7 @@
     who.textContent = m.name + ':';
 
     div.appendChild(time);
+    appendNameBadges(div, m.name);
     div.appendChild(who);
     if (m.file) {
       div.appendChild(fileChip(m.file));
@@ -3114,7 +3155,11 @@
   applyPrefs();
 
   // Keep the saved panel sizes sane when the window (or maximise state) changes
-  window.addEventListener('resize', function () { applySizes(); });
+  // Browser zoom changes devicePixelRatio and fires resize, so re-snap the badges too
+  window.addEventListener('resize', function () {
+    applySizes();
+    applyBadgeSize();
+  });
 })();
 </script>
 </body>

@@ -38,7 +38,8 @@ releaseNotes: >-
   checked: a valid one (1..., 3... or bc1..., including Taproot) gets a
   little orange coin and opens on mempool.space when clicked, and one that
   looks like an address but fails its checksum - usually a typo - gets a red
-  wavy underline and a warning not to send to it.
+  wavy underline and a warning not to send to it. And anyone with "baba" or
+  "mike" in their name now gets a little animated picture next to it.
 developer: MdotStrange
 website: https://github.com/MdotStrange/blah-app-store
 dependencies: []
