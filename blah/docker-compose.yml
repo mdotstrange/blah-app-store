@@ -40,7 +40,7 @@ services:
       DATA_DIR: /data
       # Keep this equal to `version` in umbrel-app.yml. hooks/pre-start only
       # copies new code into the installed app when the two match.
-      BLAH_VERSION: "1.14.0"
+      BLAH_VERSION: "1.14.1"
     volumes:
       # Chat history and shared files live here on the Umbrel (survive restarts/updates)
       - ${APP_DATA_DIR}/data:/data
