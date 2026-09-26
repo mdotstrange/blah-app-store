@@ -18,7 +18,7 @@ const SEND_BURST = 15; // messages one name may send per window
 const CLEAR_COOLDOWN_MS = 3000; // minimum gap between /clear calls
 const MAX_TASKS = 200;
 const MAX_TASK_TEXT = 200;
-const MAX_NOTE_TEXT = 1000;
+const MAX_NOTE_TEXT = 4000; // a calendar day's note, written in the full-page calendar
 const MAX_MEMOS = 200; // short notes in the side panel (text capped like a to-do)
 const MAX_EVENTS = 300; // recent to-do activity shown on the calendar
 const BOARD_BURST = 30; // to-do and note edits one name may make per window
@@ -486,7 +486,9 @@ function handleRequest(req, res) {
     let body = '';
     req.on('data', chunk => {
       body += chunk;
-      if (body.length > 8192) req.destroy();
+      // room for a full-length day note even once JSON has escaped every
+      // line break and quote in it
+      if (body.length > 16384) req.destroy();
     });
     req.on('end', () => guarded(req, res, () => {
       const fail = (code, message) => {

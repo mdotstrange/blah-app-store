@@ -19,10 +19,14 @@ open sees the same room.
   works great); it's remembered by that browser
 - Notes pane for short scribbles the whole room can see; any web address in a
   note is a link you can click
+- Bitcoin addresses in the chat or a note are checked (1..., 3..., bc1...
+  including Taproot): valid ones get an orange ₿ and open on mempool.space,
+  mistyped ones get a red wavy underline and a "do not send" warning
 - Shared to-do list: anyone in the room can add tasks, tick them off (they get
   struck through), edit them or delete them
-- Calendar under the checklist with today highlighted; task creates and edits
-  are marked on the day they happen, and anyone can leave a note on a day
+- Full-page calendar behind the calendar icon in the Dock (or the Calendar
+  button on the Windows 98 taskbar): a month you can read at a glance, with a
+  big shared note for every day and the to-do changes made on it
 - Text sizer (A- / A+) and font picker, remembered per browser
 - Desktop notifications: a popup with the sender and message when the chat is
   in a background tab (click it to jump back to the tab and reply)
@@ -109,21 +113,26 @@ with the cursor in the input box, ready to reply.
 
 - **Notes** (top of the right hand panel) is a shared pad of short scribbles.
   Type a line and press **Add** — no titles, no formatting, just the text —
-  and any web address you paste turns into a link you can click. The pencil
+  and any web address you paste turns into a link you can click (Bitcoin
+  addresses become mempool.space links, see above). The pencil
   edits a note in place (Enter saves, Esc gives up), the ✕ deletes it, and the
   list scrolls once there are more notes than fit.
 - **To Do** (below the notes) is one list shared by the whole room. Type a task
   and press **Add**; tick the checkbox to strike it through, use the pencil to
   edit in place (Enter saves, Esc gives up), and the ✕ to delete it. The header
   shows how many are still open.
-- **Calendar** under that: today is highlighted in blue, days where a task was
-  created or edited get a red dot, and days with a note get a green one. Click
-  a day to see what changed on it and to leave a note — notes are per day and
-  shared with everyone. ◀ ▶ page through the months.
+- **Calendar**: click the calendar icon in the Dock (it shows today's date),
+  the **Calendar** button on the Windows 98 taskbar, or **View → Calendar**, and
+  the window turns into a full month. Each day shows the start of its note and
+  how many to-do changes happened on it; today is highlighted. Click a day to
+  open it in the panel on the right: a big note (up to 4000 characters, shared
+  with everyone) with **Save note** / **Clear**, who last changed it, and that
+  day's to-do history. What you type is kept when you click another day or
+  leave the calendar. ◀ **Today** ▶ page through the months; the BLAH icon,
+  **Back to chat** or **View → Calendar** go back to the room.
 - **Resizing**: drag the divider on the left of the side panel to make the whole
-  column wider (the calendar cells grow with it), drag the divider above the
-  to-do list to make the notes taller, and drag the divider above the calendar
-  to make the calendar taller. Double-click a divider — or use
+  column wider, and drag the divider above the to-do list to make the notes
+  taller. Double-click a divider — or use
   **View → Reset panel sizes** — to go back to the automatic size. Every size
   is remembered by your browser.
 - The notes, the to-do list, its history and the day notes live in
@@ -132,8 +141,7 @@ with the cursor in the input box, ready to reply.
 - **Text sizer**: `A-` / `A+` next to the font dropdown, or
   **View → Bigger / Smaller / Reset text size**. Default is bigger than the
   old terminal look used to be. It sizes the whole thing — chat messages, task
-  text and checkboxes, the Add a task box, the calendar's month, day numbers and
-  weekday row, the day note box and the Save note / Clear buttons — kept in
+  text and checkboxes, the Add a task box and the whole calendar page — kept in
   proportion so the side panel stays readable at every setting. The size, the
   font and the panel toggles are all remembered by your browser.
 - **Menus**: `File` (rename, clear history, sign off), `View` (text size, font,
